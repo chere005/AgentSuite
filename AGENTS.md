@@ -36,6 +36,10 @@ checked for drift: prose propagates by being imported, not by manifest.
 
 - **`main` is the branch.** Stage explicit paths — never `git add -A`. Sean
   makes his own commits unless he says otherwise in that message.
+- **Two sessions share these repos.** `git pull --autostash` first, so another
+  agent's half-finished work does not ride along on your commit — and check the
+  tree again afterwards, because that pull exits 0 even when the autostash pop
+  left conflict markers behind.
 - **Approval is per-change, never inherited.** "Yes" to one deploy, one
   commit, one migration authorizes exactly that one.
 
