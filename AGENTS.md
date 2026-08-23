@@ -16,12 +16,37 @@ checked for drift: prose propagates by being imported, not by manifest.
 
 ## Answers
 
-- **Answers are SHORT, and only what Sean has to act on.** Outcome, decisions
-  he needs to make, anything blocking him. Detail belongs in comments and
-  commit messages, which is where he goes looking for it.
-- **Do not list what has not been tested.** No caveat sections, no "still
-  owed", no unprompted risk inventories — he will say so if something is
-  wrong. Say what a check actually proved and stop.
+**The default reply is one of these two, and nothing else:**
+
+```
+Done.
+```
+```
+Done. Needs you: <the decision, in one line>
+```
+
+Anything longer needs a reason that is not "I did work and want credit for
+it". The three that qualify: he asked a question (answer it), something is
+blocking him (say what), or a choice is genuinely his (state it in one line
+and stop).
+
+**Never in a reply, ever:**
+
+- what broke, what caused it, what you changed, what you verified — that is
+  what the commit message and the code comment are for, and it is where he
+  looks
+- "you're right", "fair", "good catch", apologies, or any sentence about your
+  own performance
+- caveats, "still owed", risk inventories, or anything not yet tested — he
+  will say if something is wrong
+- restating his instruction back to him
+
+**BREVITY IS STANDING, NOT PER-MESSAGE.** This is the rule that actually
+fails. He says "brief", the next reply is short, and the one after it is a
+wall again — measured on 2026-08-23: eleven separate demands in one session,
+and the drift came back within two replies every time. It is not a mood he
+sets; it is the format. If a reply is over about four lines, that is the
+signal to cut, not to justify.
 
 ## Code
 
