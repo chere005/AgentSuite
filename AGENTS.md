@@ -41,6 +41,23 @@ and stop).
   will say if something is wrong
 - restating his instruction back to him
 
+**IT IS ENFORCED, not trusted.** `hooks/brevity.py` in this repo is a Claude
+Code `Stop` hook: it reads the turn's final reply and blocks anything over six
+prose lines or 700 characters, handing back the format above. Fenced code and
+tables are exempt — the rule is about narration, not about showing him a
+command he asked for — and it fires at most once per turn, so it cannot loop.
+Install it once, globally, for every project:
+
+```sh
+mkdir -p ~/.claude/hooks && cp ~/GIT/AgentSuite/hooks/brevity.py ~/.claude/hooks/
+# then in ~/.claude/settings.json:
+#   "hooks": { "Stop": [ { "matcher": "", "hooks": [
+#     { "type": "command", "command": "python3 $HOME/.claude/hooks/brevity.py" } ] } ] }
+```
+
+Prose asking for brevity has failed for as long as it has existed here. A hook
+is the version that cannot be read past.
+
 **BREVITY IS STANDING, NOT PER-MESSAGE.** This is the rule that actually
 fails. He says "brief", the next reply is short, and the one after it is a
 wall again — measured on 2026-08-23: eleven separate demands in one session,
