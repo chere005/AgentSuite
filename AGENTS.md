@@ -1,140 +1,85 @@
-# Baseline conventions for AI-agent work on Sean's projects
+# The baseline for AI-agent work on Sean's projects
 
-This is a STUB. Everything below is a starting structure and a set of
-suggestions pulled from what's actually worked in the Mind-suite
-(CalMind/ChefMind/AcctMind/MyCalMind/CoreMind) — not finished doctrine.
-Each section has a TODO marking what still needs Sean's own judgment.
-Delete a section if it doesn't end up earning its keep; add sections
-this stub didn't anticipate.
+This is the settled common ground of the Mind-suite repos
+(CalMind / ChefMind / AcctMind / MyCalMind / CoreMind), seancheren-site, and
+whatever comes next. Everything here earned its place by being written — in
+almost the same words — in three or more of those repos' own AGENTS.md files;
+on 2026-08-23 Sean had it factored up ("consolidate all common AGENTS and
+relevant documentation from all the MindSuite repos in AgentSuite").
 
-## How to use this file
+A repo stacks its own AGENTS.md on top of this one: `@../AgentSuite/AGENTS.md`
+as the first line, then only what is true of that repo alone. Only Claude Code
+follows `@` imports — any other agent sees the literal line — so each repo also
+says in one plain sentence that the baseline lives at
+`~/GIT/AgentSuite/AGENTS.md`. Nothing here is copied bytes and nothing is
+checked for drift: prose propagates by being imported, not by manifest.
 
-A new project imports this wholesale (`@../AgentSuite/AGENTS.md` from
-its own `CLAUDE.md`) or copies down what's relevant. Either way, this
-file should only hold things true across MOST projects — anything
-project-specific belongs in that project's own `AGENTS.md`, stacked on
-top of this baseline.
+## Answers
 
-> TODO: decide the propagation model. CoreMind's canon/consumers split
-> (shared bytes copied down, a manifest tracking which files are exact
-> vs. deliberately forked, a script that fails loudly on drift) is the
-> proven pattern at 4-repo scale — is it overkill here, or does
-> AgentSuite need the same discipline once enough projects import it?
+- **Answers are SHORT, and only what Sean has to act on.** Outcome, decisions
+  he needs to make, anything blocking him. Detail belongs in comments and
+  commit messages, which is where he goes looking for it.
+- **Do not list what has not been tested.** No caveat sections, no "still
+  owed", no unprompted risk inventories — he will say so if something is
+  wrong. Say what a check actually proved and stop.
 
-## Answers are short
+## Code
 
-Outcome, decisions the user needs to make, anything blocking them.
-Detail belongs in code comments and commit messages, which is where a
-person goes looking for it when they actually need it — not in the
-chat reply. Don't list what wasn't tested; a caveat inventory costs the
-reader the time the brevity was supposed to save.
+- **Behavior lives in one place, with a test next to it.** If a rule can be
+  said in a sentence, it belongs in the shared layer (each repo's AGENTS.md
+  names its own — `packages/core`, `lib/`, `canon/`) with a test, not
+  copy-pasted into whichever screen or script needed it first.
+- **Comments state intent; the code may have drifted.** When a comment and
+  the code disagree, that is a finding, not a tiebreak.
 
-## Behavior lives in one place, with a test next to it
+## Git
 
-If a rule can be described in a sentence, it belongs in a shared/core
-layer with a test, not copy-pasted into whichever screen or script
-happens to need it first.
+- **`main` is the branch.** Stage explicit paths — never `git add -A`. Sean
+  makes his own commits unless he says otherwise in that message.
+- **Approval is per-change, never inherited.** "Yes" to one deploy, one
+  commit, one migration authorizes exactly that one.
 
-## Traps: the highest-leverage section in any AGENTS.md
+## Sean's data
 
-A "Traps" section is a list of things that have ALREADY cost real time
-— a footgun discovered the hard way, written down so the next session
-(human or agent) doesn't rediscover it by falling in again. The
-Mind-suite's own traps sections are the best-proven part of this whole
-convention:
+- **Sean's data is his.** Reading his live suite to find a bug is fine and
+  has found real ones. Writing to it, reordering it, or seeding over his
+  account is not — a write to live data happens on his word, in that message.
 
-- A UI action that doesn't fail fast (waits out a full timeout instead)
-- A check that can't fail looking exactly like one that passes (a grep
-  for the empty string, an assertion on a container that was never
-  there)
-- A build/dependency quirk with a specific, non-obvious fix (wrong
-  paths, stale caches, a flag that silently changes behavior)
+## Tests
 
-Three general ones, earned on 2026-08-22 and worth keeping whatever the
-project — each is a case of a tool being confidently wrong rather than
-failing:
+- **Break it before you trust it.** A new check must be shown to FAIL —
+  a check that cannot fail looks exactly like one that passes.
+- **Anything that tests a deploy script must neuter `ssh`/`rsync` in its
+  copy first.** The same near-miss is on record in two repos; a test that
+  can reach production is not a test.
 
-- **A fix that keeps reverting is not flaky; something is undoing it.**
-  A CocoaPods script phase marked `alwaysOutOfDate` re-extracted a
-  vendored framework on every build, silently undoing a repair applied
-  beforehand. Fourteen attempts went on suspecting a race. The repair had
-  to move INSIDE the step that was overwriting it. When the same fix fails
-  the same way twice, stop improving the fix and go and find the writer.
-- **A scratch volume is not a neutral disk.** exFAT has no extended
-  attributes, so codesign silently produces unsigned bundles and macOS
-  writes `._` AppleDouble files that then fail the signature; it has no
-  atomic rename, so gradle's cache breaks on it. Both looked like build
-  bugs. Check the FILESYSTEM before believing a toolchain has gone mad.
-- **An allow-list of ports, hosts or versions goes stale the first time
-  reality picks a different one.** A dev-server check listed two ports;
-  running it on a third aimed the app at the wrong server and reported a
-  server error. Match on the thing that is actually invariant.
+## Releases: the dtp / tdtp gesture
 
-> TODO: as more traps get discovered, they belong HERE if they're not
-> project-specific — a filesystem quirk, a codesign gotcha, a tool's flag
-> behaving differently than documented. "This specific repo's Podfile"
-> traps stay local.
+Sean's shorthand, suite-wide since 2026-08-22: **dtp** = deploy, tag, push;
+**tdtp** = the same lane with the full test run in front. Two lanes, one
+command each, in every repo that ships.
 
-## Standing rules — the pattern, not the content
+- Tags are bare `x.y.0` — never `v`-prefixed.
+- A ship bumps the MINOR version unless Sean says major or patch.
+- A failed deploy stops the lane — never tag around one. A re-run reuses the
+  version a failed run bumped-but-never-tagged rather than burning a number.
+- A release reports itself to seancheren.com/status via CoreMind's
+  `bin/report-status.sh`; a status failure never fails a release.
+- **One heavy build at a time, never in parallel** — two concurrent
+  device/desktop builds have broken this machine twice.
 
-Each Mind-suite repo's AGENTS.md has a short list of non-obvious,
-strongly-held rules stated once and referred back to (a data-ownership
-rule, a deploy-ordering rule, a version-bumping convention). What makes
-them work: they're SHORT, they're STATED WITH THE REASON ("web first,
-always — because X"), and they're revisited when reality changes
-instead of left to rot.
+## Mail
 
-> TODO: does Sean want a genuinely cross-project standing rule here
-> (e.g. "never commit without being asked", "prefer editing to
-> creating") — the ones already living in Claude's own global
-> instructions are a start, but a few are Mind-suite-specific enough
-> that they might belong promoted here once they've proven true on a
-> second and third project.
+- **Mail is stubbed, deliberately.** Every send site logs
+  `would have emailed …` and returns without sending; the real transport sits
+  commented out beside the stub, one uncomment away. Turning mail on is a
+  host's decision made by Sean, never a side effect of a fix.
 
-## Release/deploy conventions
+## Traps
 
-The Mind-suite's `dtp`/`tdtp` gesture (deploy-tag-push / test-deploy-
-tag-push, one command, bare `x.y.0` tags, minor-bump by default) is a
-proven, low-friction release pattern for a solo developer shipping
-often. Worth adopting wholesale for a new project rather than
-reinventing a release flow each time.
+The highest-leverage section in any repo's AGENTS.md is its own Traps list —
+things that ALREADY cost real time there. Two that cost time everywhere:
 
-> TODO: is this actually general, or is it coupled to NearlyFreeSpeech
-> hosting + the specific rsync-based deploy.sh shape? Worth separating
-> "the gesture" (one command, tag, push, minor-bump) from "the specific
-> shell implementation" so future projects can adopt the former even on
-> different hosting.
-
-## Skills — see `skills/`
-
-`skills/README.md` states the bar: a skill earns a place here once it has
-been **useful twice**. Candidates worth promoting out of the Mind-suite,
-based on what's already proven useful there:
-
-- **cross-platform-architect** — keeping two platforms (web + native,
-  or iOS + Android) as deliberate mirrors of each other without
-  sharing code, so a change lands cheaply on both.
-- **web-dev conventions** — a specific, opinionated take on
-  server-rendered PHP + vanilla JS + SQL with no framework and no
-  build step: escaping, CSRF, sessions, prepared statements,
-  progressive-enhancement AJAX.
-- **nearlyfreespeech** (or whatever the actual hosting target of a new
-  project is) — the specific gotchas of a specific host, written down
-  once so a deploy doesn't relearn them.
-- **ios-watch-dev** style skills — per-platform native conventions
-  (SwiftUI/Kotlin/whatever), written as a skill rather than scattered
-  across an AGENTS.md, so they can be pulled into ANY project that
-  touches that platform, not just the one that first needed it. Note the
-  originals were deleted with the app they described (2026-08-22): the
-  IDEA is the candidate, not that text.
-- A **build-tooling-gotchas** skill might be worth splitting out of
-  the Traps section above once it grows — Xcode/CocoaPods/Gradle
-  quirks that recur across projects regardless of what each project
-  actually does.
-
-## What this file is deliberately NOT
-
-Not a place for project-specific facts (a particular API's shape, a
-particular deploy target, a particular data model) — those stay in the
-project's own `AGENTS.md`, which imports this file as a baseline, not
-the other way around.
+- The shell's working directory persists between tool calls. `cd` in a
+  script, and the next command starts where the last one ended.
+- A green check you have not watched fail proves nothing (see Tests).

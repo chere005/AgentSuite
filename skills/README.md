@@ -14,20 +14,18 @@ nobody reads.
 
 ## What's here
 
-Nothing yet — see the TODO list in `../AGENTS.md` for the candidates, all of
-them promotable out of the Mind-suite once they have earned that second use.
-
-Two are close, and both survive in `seancheren-site/.claude/skills/`:
-
 - **`web-dev`** — plain PHP + vanilla JS + SQL, no framework, no build step:
   escaping, CSRF, sessions, prepared statements, POST→redirect→GET,
-  progressive-enhancement AJAX. Already general; it says "this codebase"
-  in a few places, which is the editing a promotion would need.
+  progressive-enhancement AJAX. Promoted from seancheren-site on 2026-08-23,
+  generalised on the way up.
 - **`nearlyfreespeech`** — the specific gotchas of one host: the
   `/home/{public,protected,private}` layout, the `web` user and the file
-  permissions it causes, custom php.ini, TLS, rsync deploys, cron. General to
-  the HOST rather than to the project, which is exactly the shape that pays
-  off when a second project lands on it.
+  permissions it causes, custom php.ini, TLS, rsync deploys, scheduled tasks.
+  General to the HOST rather than to any project.
+
+The projects that use them keep a relative symlink in their own
+`.claude/skills/` (seancheren-site does); a clone without AgentSuite beside it
+gets dangling links, which is the honest failure.
 
 Two skills that used to live beside them — `ios-watch-dev` and
 `cross-platform-architect` — were **deleted** on 2026-08-22 with the app they

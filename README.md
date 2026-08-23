@@ -13,7 +13,8 @@ where they live once, instead.
 ## What's here
 
 - **`AGENTS.md`** — the baseline conventions and standing rules a new
-  project should start from. A stub right now; see the TODOs inside it.
+  project should start from — and, since 2026-08-23, the imported baseline
+  every Mind-suite repo's own AGENTS.md stacks on top of.
 - **`skills/`** — reusable Claude Code skills worth having in more than
   one project. Each is a candidate to promote out of whichever repo
   first needed it.
@@ -51,5 +52,6 @@ this scale.
 
 ## Status
 
-Just created, 2026-08-22. Everything past this point is a stub for Sean
-to fill in — see `AGENTS.md`'s own TODOs for what's actually missing.
+Settled on 2026-08-23: the AGENTS.md here stopped being a stub when the
+common rules were factored up out of the six repos that had been repeating
+them, and the first two skills were promoted from seancheren-site.
