@@ -22,6 +22,12 @@ nobody reads.
   `/home/{public,protected,private}` layout, the `web` user and the file
   permissions it causes, custom php.ini, TLS, rsync deploys, scheduled tasks.
   General to the HOST rather than to any project.
+- **`bootstrap`** — the machine, not the code: package manager, the two SSH
+  keys (GitHub and NFSN), the clones, `deploy.conf`, the brevity hook. Written
+  on 2026-09-21, when a bare Mac turned out to have no SSH key, no `gh` and no
+  `php`, and the setup was rediscovered a command at a time. It carries a
+  runnable `bootstrap.sh`, which the other two skills do not: this one is a
+  procedure with an order, and prose describing an order gets half-followed.
 
 The projects that use them keep a relative symlink in their own
 `.claude/skills/` (seancheren-site does); a clone without AgentSuite beside it

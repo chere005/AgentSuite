@@ -1,0 +1,31 @@
+# bootstrap.conf — copy to ~/.config/agentsuite/bootstrap.conf and fill in.
+#
+# NONE OF THIS BELONGS IN THE REPO. AgentSuite is public: a name, an address, a
+# GitHub account and a deploy login are all disclosures, and the NAME of a
+# private repo is one too. So the script carries the procedure and this file
+# carries who it is for. It is read from
+# ${XDG_CONFIG_HOME:-~/.config}/agentsuite/bootstrap.conf, chmod 600, and the
+# environment overrides it for a one-off run.
+#
+# bootstrap.sh asks for anything missing and appends the answer here, so an
+# empty file is a fine starting point — you can also just run it and answer.
+
+# The commit identity. Prefer GitHub's per-account noreply address over a real
+# mailbox: every commit trailer in a public repo is scrapeable.
+#   GIT_NAME="Your Name"
+#   GIT_EMAIL="0000000+you@users.noreply.github.com"
+
+# The GitHub account the repos belong to.
+#   GH_OWNER="your-account"
+
+# Which repos to clone. LEAVE IT UNSET to have gh list every non-fork repo the
+# account owns — which is how the private ones get cloned without their names
+# being written down anywhere.
+#   REPOS="RepoOne RepoTwo"
+
+# The NearlyFreeSpeech login deploy.sh rsyncs to, and which checkout wants it.
+#   SUITE_DEPLOY_HOST="<sshuser>_<site>@ssh.<realm>.nearlyfreespeech.net"
+#   SITE_REPO="your-site-repo"
+
+# Where the checkouts live. Default ~/GIT.
+#   MIND_DIR="$HOME/GIT"

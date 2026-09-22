@@ -18,6 +18,9 @@ where they live once, instead.
 - **`skills/`** — reusable Claude Code skills worth having in more than
   one project. Each is a candidate to promote out of whichever repo
   first needed it.
+  One of them, `bootstrap`, is about the machine rather than a project:
+  it carries the script that takes a bare box to where all of this can be
+  cloned, built and shipped.
 
 ## How another project uses this
 
