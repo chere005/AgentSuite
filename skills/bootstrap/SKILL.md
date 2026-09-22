@@ -136,6 +136,15 @@ themselves, so re-running the step is a no-op, not a reinstall.
 
 ## Traps
 
+- **The Command Line Tools are not Xcode, and the machine feels fine either
+  way.** `git`, `clang` and `make` come from the CLT, so every web- and
+  Tauri-shaped build succeeds — right up to the first native one, where
+  `xcodebuild` says the active developer directory *"is a command line tools
+  instance"* and stops. That is every Swift app and every Mac Catalyst build in
+  the suite. Found on 2026-09-21 with three desktop apps already installed and
+  the native ones dead. `packages` cannot fix it — Xcode is not a cask, it is
+  tens of gigabytes and the App Store wants an Apple ID — so it warns, and
+  `verify` fails on it rather than calling the machine ready.
 - **An installed JDK that `java` cannot find.** brew's `openjdk` is keg-only,
   so `java` resolves to the macOS stub that offers to send you to java.com and
   gradle fails for want of a JDK sitting right there. The documented cure is a

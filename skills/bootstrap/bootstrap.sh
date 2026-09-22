@@ -147,6 +147,29 @@ nfsn_ok() {
   ssh $KEYTEST -i "$NFSN_KEY" "$SUITE_DEPLOY_HOST" true 2>/dev/null
 }
 
+# FULL XCODE, not the Command Line Tools — and they are not the same thing, in
+# the one way that matters here. `git`, `clang` and `make` come from the CLT and
+# everything web-shaped builds fine with only those, so a machine feels
+# complete right up until the first native build: xcodebuild then says the
+# active developer directory "is a command line tools instance" and stops. That
+# is every Swift app and every Mac Catalyst build in the suite — found on
+# 2026-09-21 with three Tauri apps already installed and the native ones dead.
+#
+# NOT INSTALLABLE FROM HERE. Xcode is not a Homebrew cask (licence), it is tens
+# of gigabytes, and the App Store wants an Apple ID — so this is a gate, like
+# Homebrew itself: say what is missing, say exactly what fixes it, and stop
+# short of pretending a script can do it.
+xcode_check() {
+  [ "$(uname -s)" = Darwin ] || return 0
+  if xcodebuild -version >/dev/null 2>&1; then
+    echo "    xcode: $(xcodebuild -version 2>/dev/null | head -1)"
+    return 0
+  fi
+  warn "no full Xcode — Tauri/web builds work, every Swift and Catalyst one does not"
+  warn "  install Xcode from the App Store, then:  sudo xcode-select -s /Applications/Xcode.app"
+  warn "  and once:  sudo xcodebuild -license accept"
+}
+
 # ---------------------------------------------------------------- ARCH: A STUB
 # UNRUN. There is no Arch machine here — this is macOS, and every line below is
 # read off the dotfiles repo rather than off a working install, so treat it as
@@ -246,6 +269,7 @@ step_packages() {
       # the prompt.
       run "brew install --cask android-platform-tools"
       jdk_on_path
+      xcode_check
       # The apps. Casks auto-update themselves, so this is a one-time install
       # and re-running it is a no-op rather than a reinstall.
       run "brew install --cask firefox sublime-text sublime-merge rectangle" ;;
@@ -484,6 +508,11 @@ step_verify() {
     if command -v "$c" >/dev/null 2>&1; then printf '    %-8s %s\n' "$c" "$(command -v "$c")"
     else printf '    %-8s MISSING\n' "$c"; bad=1; fi
   done
+  if [ "$(uname -s)" = Darwin ]; then
+    xcodebuild -version >/dev/null 2>&1 \
+      && echo "    xcode    $(xcodebuild -version 2>/dev/null | head -1)" \
+      || { echo "    xcode    COMMAND LINE TOOLS ONLY — no Swift or Catalyst build"; bad=1; }
+  fi
   github_ok && echo "    github   authenticated" || { echo "    github   NOT authenticated"; bad=1; }
   if [ -n "${SUITE_DEPLOY_HOST:-}" ]; then
     nfsn_ok && echo "    nfsn     authenticated" || { echo "    nfsn     NOT authenticated"; bad=1; }
