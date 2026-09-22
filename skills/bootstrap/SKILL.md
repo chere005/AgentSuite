@@ -28,7 +28,7 @@ named so a single piece can be redone on its own:
 
 | step | what it does |
 |------|--------------|
-| `packages` | `git python gh node rsync php` via brew / pacman / apt / dnf — plus, on macOS, the build toolchains (`rust`, `cocoapods`, `watchman`, `jq`, `openjdk`, `gradle`, `android-platform-tools`), a `JAVA_HOME` line in the shell profile, and the `firefox`, `sublime-text`, `sublime-merge` casks |
+| `packages` | `git python gh node rsync php` via brew / pacman / apt / dnf — plus, on macOS, the build toolchains (`rust`, `cocoapods`, `watchman`, `jq`, `openjdk`, `gradle`, `android-platform-tools`), a `JAVA_HOME` line in the shell profile, and the `firefox`, `sublime-text`, `sublime-merge`, `rectangle` casks |
 | `claude` | the `claude` desktop cask and the `claude-code` CLI cask; the official installer off macOS |
 | `identity` | `git config --global` name and email, from the config below |
 | `keys` | `~/.ssh/id_ed25519` for GitHub, `~/.ssh/id_nfsn` for the host, plus the `~/.ssh/config` blocks |
@@ -36,6 +36,31 @@ named so a single piece can be redone on its own:
 | `deploy` | `$SITE_REPO/deploy.conf` from `$SUITE_DEPLOY_HOST` |
 | `hook` | `hooks/brevity.py` into `~/.claude/hooks/`, merged into `~/.claude/settings.json` |
 | `verify` | runs the real auth, the real lint, the real test suite |
+
+## The Arch branch is a stub, and says so
+
+macOS is the machine this was written on and the only one it has run on. The
+`pacman` branch is read off the dotfiles repo rather than off a working
+install: every package in it is something a config there actually invokes —
+`picom`, `dex`, `xss-lock`, `i3lock`, `nm-applet`, `scrot` and `xclip` from the
+i3 config; `startxfce4`, `xrandr`, `xrdb` and `feh` from `xinitrc`/`xprofile`;
+`polybar`, `rofi`, `kitty`, `openbox` and a Nerd Font for their own sake —
+but expect to fix a package name or two the first time it meets a real box.
+
+**The audio is deliberately absent.** No `pulseaudio`, no `pavucontrol` — Sean,
+2026-09-21: *"the audio is broken in my config, so drop that"*. The pieces in
+the dotfiles that drive them (polybar's `pulseaudio` module, the `pactl` binds
+in the i3 config and `xbindkeysrc`, the `afix` alias in `bashrc`) are the ones
+to leave behind when those are laid down. Installing a sound stack to match a
+config that does not work only reproduces the breakage faithfully.
+
+**The dotfiles are not laid down by the script.** It prints the `stow` command
+instead — stow because it is the existing solution and one package: a stow
+package per program, `stow -t ~` symlinks it so an edit in the checkout is
+live, and `stow -D` backs it out. That needs the dotfiles repo restructured
+into those packages first, and it wants doing on the Arch box. A script that
+half-moves someone's `~/.config` on a machine nobody is watching is worse than
+a line of text saying what to run.
 
 ## Nothing about who this is for is in this repo
 

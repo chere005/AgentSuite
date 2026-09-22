@@ -147,6 +147,51 @@ nfsn_ok() {
   ssh $KEYTEST -i "$NFSN_KEY" "$SUITE_DEPLOY_HOST" true 2>/dev/null
 }
 
+# ---------------------------------------------------------------- ARCH: A STUB
+# UNRUN. There is no Arch machine here — this is macOS, and every line below is
+# read off the dotfiles repo rather than off a working install, so treat it as
+# the list to TRY and expect to fix a name or two the first time it meets a
+# real box. It is written down because the alternative is rediscovering it, and
+# the packages are not guesses: each one is something a config in the dotfiles
+# repo actually invokes.
+#
+#   i3 config          picom, dex, xss-lock, i3lock, nm-applet, scrot, xclip
+#   xinitrc/xprofile   startxfce4, dbus, xrandr, xrdb, feh
+#   polybar, rofi      themselves, and a Nerd Font for their glyphs
+#   kitty              $TERMINAL
+#   openbox/rc.xml     openbox — a second WM, kept because the config is there
+#
+# THE AUDIO IS DELIBERATELY ABSENT — Sean, 2026-09-21: "the audio is broken in
+# my config, so drop that". So no pulseaudio and no pavucontrol here, and the
+# pieces in the dotfiles that drive them (polybar's pulseaudio module, the
+# pactl binds in i3 and xbindkeysrc, the afix alias in bashrc) are the ones to
+# leave behind when these are laid down. Installing a sound stack to match a
+# config that does not work is how a broken setup gets reproduced faithfully.
+arch_desktop() {
+  run "sudo pacman -S --needed --noconfirm \
+        i3-wm i3lock polybar rofi picom kitty \
+        xfce4-session thunar xfce4-screenshooter openbox \
+        xorg-server xorg-xinit xorg-xrandr xorg-xrdb \
+        feh xbindkeys dex xss-lock network-manager-applet scrot xclip neofetch \
+        ttf-firacode-nerd"
+  # THE DOTFILES THEMSELVES: stow, because it is the existing solution and it
+  # is one package — the repo's dotfiles/ tree becomes a stow package per
+  # program and `stow -t ~` symlinks it, so an edit in the checkout is live and
+  # `stow -D` backs it out. Left as a printed instruction rather than a run:
+  # the repo is not laid out as stow packages yet, and a script that half-moves
+  # someone's ~/.config on a machine nobody is watching is worse than a line of
+  # text telling them what to do.
+  cat <<'TXT'
+    dotfiles: not laid down by this script yet.
+      The existing solution is stow, one package per program:
+        stow -d <dotfiles-repo> -t "$HOME" i3 polybar rofi picom kitty bash x
+      That needs the repo restructured into those packages first, and it wants
+      doing on the Arch box, not from here. Leave the audio pieces out.
+TXT
+}
+
+# ---------------------------------------------------------------- ARCH: END
+
 # brew's openjdk is KEG-ONLY: installed, working, and not on PATH — `java`
 # resolves to the macOS stub that offers to send you to java.com, and gradle
 # fails for want of a JDK that is sitting right there. The documented cure is a
@@ -203,9 +248,11 @@ step_packages() {
       jdk_on_path
       # The apps. Casks auto-update themselves, so this is a one-time install
       # and re-running it is a no-op rather than a reinstall.
-      run "brew install --cask firefox sublime-text sublime-merge" ;;
+      run "brew install --cask firefox sublime-text sublime-merge rectangle" ;;
     pacman)
-      run "sudo pacman -S --needed --noconfirm git python github-cli nodejs npm rsync php" ;;
+      # THE TOOLCHAIN, same job as the brew block above.
+      run "sudo pacman -S --needed --noconfirm git python python-pip github-cli nodejs npm rsync php rust jq stow firefox"
+      arch_desktop ;;
     apt)
       run "sudo apt-get update"
       # gh is not in Debian/Ubuntu's own archive; its repo has to be added
