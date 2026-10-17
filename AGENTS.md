@@ -121,6 +121,39 @@ command each, in every repo that ships.
   commented out beside the stub, one uncomment away. Turning mail on is a
   host's decision made by Sean, never a side effect of a fix.
 
+## A file on a server is never patched in place
+
+**This is absolute.** On 2026-10-17 an agent inserted one user into
+`/home/protected/lib/config.php` on ec530.com with a regex over SSH. The
+insert landed before `<?php`, which turned the open tag into text, and a
+second "repair" stripped the tag entirely. Everything before `<?php` in a
+`.php` file is OUTPUT: for about a minute every page on the site began with the
+whole config — every username, every password hash, and the live SMTP
+token. Sean saw it on a screen share. On a work site that is a breach.
+
+So, on any server, for any file that running code reads — `config.php`,
+`.htaccess`, `php.ini`, a data file, anything:
+
+- **Never edit it in place.** No `sed -i`, no `php -r` with `preg_replace`,
+  `str_replace` or `substr` over the file, no heredoc appending, no "just add
+  one line". Not once, not for a one-liner, not because it worked last time.
+- **The only move is replace-whole:** build the complete new file locally,
+  **lint it** (`php -l` for PHP), confirm its first bytes are what the format
+  requires (`<?php`), upload it to a temp name beside the target, lint it
+  there too, then `mv` it over — one atomic rename. Then **fetch a page and
+  read its first bytes** before saying it is done.
+- A password hash, an API key, a token: these contain `$`, `/`, `.` and `+`.
+  They pass through **no** shell double quotes, no regex replacement string,
+  no `printf` format. A program holds them in a variable and writes a file.
+- If a repo has `tools/server-config.sh` (ec530, seancheren-site), that is the
+  only way its server config changes. If it does not, write one first.
+
+The mechanism, so nobody re-derives it the hard way: `preg_replace` reads `$2`
+and `$12` in a replacement string as back-references, so a bcrypt hash
+(`$2y$12$…`) comes out mangled; a `strpos` for `[` that finds nothing returns
+`false`, and `substr($s, 0, false + 1)` is "the first byte". Each edit looked
+like a one-liner. Each was a deploy of a config file with no lint and no check.
+
 ## Traps
 
 The highest-leverage section in any repo's AGENTS.md is its own Traps list —
