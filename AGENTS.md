@@ -37,6 +37,7 @@ mkdir -p ~/.claude/hooks && cp ~/GIT/AgentSuite/hooks/brevity.py ~/.claude/hooks
 - **Reading his live suite to find a bug is fine; writing, reordering or seeding over it happens only on his word, in that message.**
 - **Break it before you trust it:** a new check must be shown to FAIL; a check that cannot fail looks like one that passes.
 - **A test of a deploy script must neuter `ssh`/`rsync` in its copy first;** a test that can reach production is not a test.
+- **Keep Sean's ticket board current, in every repo:** propose new work you find (`~/GIT/AgentSuite/tools/todo add <Repo> todo|bug|misc "title" -n "why/where"`) and propose done when you finish a ticket (`todo done <n> -n "<commit or version>"`); `todo list <Repo>` shows the numbers. It lands in his Inbox at seancheren.com/todo for approval, never on the board directly.
 
 ## Releases: dtp / tdtp
 - **dtp** = deploy, tag, push; **tdtp** = same lane with the full test run first. One command each, in every repo that ships.

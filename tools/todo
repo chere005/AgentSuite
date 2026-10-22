@@ -1,0 +1,85 @@
+#!/usr/bin/env python3
+"""Propose changes to Sean's ticket board (seancheren.com/todo). Nothing changes until he approves it in the Inbox.
+
+  todo list [REPO]                              open tickets (all, or one repo's), with their numbers
+  todo add REPO KIND "TITLE" [-n NOTES] [-p high|normal|low]
+                                                propose a ticket; KIND is todo|bug|misc; REPO is a project
+                                                name (CalMind, seancheren-site, ...) or - for none
+  todo done N [-n NOTE]                         propose marking ticket #N done (say what did it: a commit, a version)
+
+The token is read from $TODO_TOKEN or ~/.config/seancheren/todo-token; $TODO_API overrides the endpoint.
+"""
+import argparse, json, os, subprocess, sys, urllib.error, urllib.parse, urllib.request
+
+API = os.environ.get("TODO_API", "https://seancheren.com/todo/api.php")
+
+
+def token() -> str:
+    t = os.environ.get("TODO_TOKEN", "")
+    if not t:
+        try:
+            with open(os.path.expanduser("~/.config/seancheren/todo-token")) as f:
+                t = f.read().strip()
+        except OSError:
+            sys.exit("todo: no token ($TODO_TOKEN or ~/.config/seancheren/todo-token)")
+    return t
+
+
+def call(method: str, query: dict, body=None) -> dict:
+    url = API + ("?" + urllib.parse.urlencode(query) if query else "")
+    data = json.dumps(body).encode() if body is not None else None
+    req = urllib.request.Request(url, data=data, method=method, headers={
+        "Authorization": "Bearer " + token(), "X-Todo-Token": token(), "Content-Type": "application/json",
+        "X-Claudio": "1"})
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            return json.load(r)
+    except urllib.error.HTTPError as e:
+        try:
+            msg = json.load(e).get("error", "")
+        except Exception:
+            msg = ""
+        sys.exit(f"todo: {e.code} {msg}".rstrip())
+
+
+def source() -> str:
+    try:
+        top = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True).stdout.strip()
+    except OSError:
+        top = ""
+    return (os.path.basename(top) if top else os.path.basename(os.getcwd())) + " agent"
+
+
+def main() -> None:
+    p = argparse.ArgumentParser(prog="todo", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = p.add_subparsers(dest="cmd", required=True)
+    ls = sub.add_parser("list"); ls.add_argument("repo", nargs="?", default="")
+    ad = sub.add_parser("add"); ad.add_argument("repo"); ad.add_argument("kind", choices=["todo", "bug", "misc"])
+    ad.add_argument("title"); ad.add_argument("-n", "--notes", default=""); ad.add_argument("-p", "--priority", default="normal",
+                                                                                          choices=["high", "normal", "low"])
+    dn = sub.add_parser("done"); dn.add_argument("n", type=int); dn.add_argument("-n", "--note", default="")
+    a = p.parse_args()
+
+    if a.cmd == "list":
+        r = call("GET", {"op": "list", "repo": a.repo})
+        for t in r.get("tickets", []):
+            where = t["project"] + " " if t.get("project") else ""
+            pri = " (" + t["priority"] + ")" if t["priority"] != "normal" else ""
+            print(f"#{t['n']:<4} {where}{t['kind']}: {t['title']}{pri}" + (" [doing]" if t["status"] == "doing" else ""))
+        if r.get("pending"):
+            print(f"({r['pending']} proposal(s) waiting in the inbox)")
+        return
+    if a.cmd == "add":
+        prop = {"action": "add", "repo": "" if a.repo == "-" else a.repo, "kind": a.kind, "title": a.title,
+                "notes": a.notes, "priority": a.priority}
+    else:
+        prop = {"action": "done", "n": a.n, "note": a.note}
+    r = call("POST", {}, {"op": "propose", "from": source(), "proposals": [prop]})
+    res = (r.get("results") or [""])[0]
+    if res.startswith("!"):
+        sys.exit("todo: refused: " + res[1:])
+    print("queued for Sean's approval" if r.get("queued") else "nothing to do: already queued, on the board, or done")
+
+
+if __name__ == "__main__":
+    main()
