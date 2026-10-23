@@ -1,52 +1,11 @@
-# skills/
+# Shared skills
 
-Claude Code skills worth having in more than one project.
+| Skill | Use for |
+| --- | --- |
+| [web-dev](web-dev/SKILL.md) | Plain PHP and browser JavaScript changes |
+| [nearlyfreespeech](nearlyfreespeech/SKILL.md) | NearlyFreeSpeech deployment and host configuration |
+| [bootstrap](bootstrap/SKILL.md) | Machine setup with the bundled bootstrap script |
 
-## What belongs here
+Promote a skill when more than one project needs it. Keep the description specific to its trigger, essential decisions in `SKILL.md`, and conditional detail in references. Delete stale instructions rather than preserving their history in the active guidance. See [OpenAI's guidance](https://developers.openai.com/blog/rethinking-skills-and-prompts-for-gpt-6-astra).
 
-A skill earns a place here once it has been **useful twice**. Written for one
-project and never needed again, it belongs in that project's own
-`.claude/skills/`; written once and reached for on the next project too, it
-belongs here and the project keeps a copy or a symlink.
-
-That bar is deliberate. A shared directory nobody prunes becomes a directory
-nobody reads.
-
-## What's here
-
-- **`web-dev`** — plain PHP + vanilla JS + SQL, no framework, no build step:
-  escaping, CSRF, sessions, prepared statements, POST→redirect→GET,
-  progressive-enhancement AJAX. Promoted from seancheren-site on 2026-08-23,
-  generalised on the way up.
-- **`nearlyfreespeech`** — the specific gotchas of one host: the
-  `/home/{public,protected,private}` layout, the `web` user and the file
-  permissions it causes, custom php.ini, TLS, rsync deploys, scheduled tasks.
-  General to the HOST rather than to any project.
-- **`bootstrap`** — the machine, not the code: package manager, the two SSH
-  keys (GitHub and NFSN), the clones, `deploy.conf`, the brevity hook. Written
-  on 2026-09-21, when a bare Mac turned out to have no SSH key, no `gh` and no
-  `php`, and the setup was rediscovered a command at a time. It carries a
-  runnable `bootstrap.sh`, which the other two skills do not: this one is a
-  procedure with an order, and prose describing an order gets half-followed.
-
-The projects that use them keep a relative symlink in their own
-`.claude/skills/` (seancheren-site does); a clone without AgentSuite beside it
-gets dangling links, which is the honest failure.
-
-Two skills that used to live beside them — `ios-watch-dev` and
-`cross-platform-architect` — were **deleted** on 2026-08-22 with the app they
-described. They are not candidates: the ideas in them are worth having again,
-but the text was about a specific Xcode project that no longer exists, and
-promoting stale doctrine is worse than writing it fresh.
-
-## How a project uses one
-
-Copy or symlink it into that project's `.claude/skills/`. There is no
-propagation tooling and there may never need to be — see the TODO in
-`../AGENTS.md` about whether this repo ever wants CoreMind's drift-check
-discipline, or whether "copy it, it's yours now" is good enough at this scale.
-
-A skill is a directory with a `SKILL.md` whose frontmatter carries `name` and
-`description`. The description is what Claude reads to decide whether the skill
-is relevant, so it is the part worth most of the effort: say when to reach for
-it, not what it contains.
+Use [the installer](../README.md#install-or-update-a-consumer) to distribute ordinary files to Claude and Codex. Each consumer can check for drift without requiring symlinks or loading all references for every task.

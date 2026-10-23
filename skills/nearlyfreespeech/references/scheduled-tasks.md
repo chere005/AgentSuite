@@ -1,42 +1,11 @@
-# Scheduled tasks (cron) and daemons on NFS.NET
+# Scheduled tasks and daemons
 
-## Scheduled tasks (cron jobs)
+Use the site's **Manage Scheduled Tasks** action for periodic work. The documented minimum interval is ten minutes. Tasks can run as the site owner or `web`; choose the identity whose permissions match the job.
 
-- Create them in the member panel: **Site Information → Actions box → "Manage
-  Scheduled Tasks."** There is no crontab file you edit over SSH; it's panel-
-  managed.
-- **Minimum frequency is once every 10 minutes.** Available on all server types,
-  including static sites.
-- Each task can run **as the site owner** or **as the `web` user** — choose
-  `web` when the job reads or writes files that PHP (the web server) created, or
-  you'll hit the ownership wall described in the main skill.
-- **Output handling:** stdout+stderr are emailed to you when there is any. If
-  the mail bounces/rejects or the output is very large, it's written to a file
-  in **`/home/logs`** instead. A task that prints nothing sends no mail — so
-  "no email" means *either* success *or* a job that simply had no output; don't
-  read silence as proof it worked. Log a heartbeat if you need certainty.
-- The command runs in a normal shell on the FreeBSD host. Use **absolute paths**
-  (`/usr/local/bin/php /home/protected/tools/job.php`) — don't assume your login
-  shell's `$PATH` or working directory.
-- A task can also just hit a URL on your own site (`curl -s https://…`) — handy
-  when the work must run **as `web`** and lives behind PHP, mirroring the
-  HTTP-triggered pattern this repo uses for seeding.
+- Use absolute command and file paths. Do not assume an interactive shell's environment or working directory.
+- Set an execution bound and coordinate overlapping runs when a job can exceed its interval. Verify completion from recorded outcomes; absent email is not proof of success.
+- Output is emailed when possible, with oversized/undeliverable output diverted to `/home/logs`. Exclude credentials and private content from job output.
+- Use a daemon only for work that must remain resident or react more frequently. Availability depends on server type and panel configuration; inspect the current site before choosing or changing it. Persistent processes have ongoing resource costs.
+- Prefer the application's existing authenticated administration route when work belongs in an HTTP request. Creating a scheduler, daemon or public mutation endpoint is a separate design decision.
 
-## Daemons (persistent processes)
-
-- For work that must run more often than every 10 minutes, or must stay
-  resident (a queue worker, a websocket/long-poll backend, a non-PHP server),
-  use a **daemon** instead of cron.
-- **Daemon and Proxy management only appear once the site's server type is set to
-  "Custom" or "Apache 2.4 Generic"** (Site Information Panel). Plain PHP sites
-  don't show these options until you switch.
-- A daemon is an **always-on process → continuous RAM cost** under the pay-as-
-  you-go model. Don't add one for something a 10-minute cron or an on-request
-  PHP handler can do. For this site's needs (a small self-posting PHP suite),
-  neither a daemon nor cron is currently required.
-
-## Rule of thumb
-
-Static/periodic upkeep → scheduled task. Something that must listen or react
-continuously → daemon (and accept the RAM bill). Anything that only needs to run
-when a user acts → just do it in the request, no scheduler at all.
+Source checked 2026-10-22: [NFSN scheduled tasks](https://faq.nearlyfreespeech.net/section/programming/cron). Confirm current daemon/server-type requirements in the member panel.

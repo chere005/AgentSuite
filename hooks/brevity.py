@@ -1,68 +1,73 @@
 #!/usr/bin/env python3
-"""Stop hook: refuse an over-long final reply once, and say what the shape is.
+"""Claude Stop hook. Warn by default; AGENTSUITE_BREVITY_MODE=block opts into enforcement."""
+import json
+import os
+from pathlib import Path
+import re
+import sys
 
-Prose only — fenced code, tables and file paths are exempt, because the rule is
-about narration, not about showing him a command he asked for. Blocks at most
-once per turn (stop_hook_active), so it can never loop.
-"""
-import json, re, sys
 
-MAX_LINES = 6
-MAX_CHARS = 700
+def last_message(event):
+    # Stop can arrive before the current response is flushed to the transcript.
+    if isinstance(event.get("last_assistant_message"), str):
+        return event["last_assistant_message"]
+    last = ""
+    try:
+        with Path(event["transcript_path"]).open(encoding="utf-8", errors="replace") as stream:
+            for line in stream:
+                try:
+                    record = json.loads(line)
+                except ValueError:
+                    continue
+                if not isinstance(record, dict) or record.get("type") != "assistant":
+                    continue
+                content = record.get("message", {}).get("content", "")
+                if isinstance(content, list):
+                    content = " ".join(block.get("text", "") for block in content
+                        if isinstance(block, dict) and block.get("type") == "text")
+                if isinstance(content, str) and content.strip():
+                    last = content
+    except (OSError, KeyError, TypeError):
+        pass
+    return last
 
-try:
-    ev = json.load(sys.stdin)
-except Exception:
-    sys.exit(0)
 
-if ev.get("stop_hook_active"):        # already nudged this turn
-    sys.exit(0)
-
-path = ev.get("transcript_path")
-if not path:
-    sys.exit(0)
-
-last = ""
-try:
-    for line in open(path, errors="ignore"):
-        try:
-            d = json.loads(line)
-        except Exception:
+def prose_lines(message):
+    lines, fence = [], None
+    for line in message.splitlines():
+        marker = re.match(r"^\s*(`{3,}|~{3,})(.*)$", line)
+        if marker:
+            token, suffix = marker.groups()
+            if fence is None:
+                fence = token
+            elif token[0] == fence[0] and len(token) >= len(fence) and not suffix.strip():
+                fence = None
             continue
-        if d.get("type") != "assistant":
+        if fence is not None or not line.strip() or line.lstrip().startswith("|"):
             continue
-        c = d.get("message", {}).get("content")
-        if isinstance(c, list):
-            t = " ".join(b.get("text", "") for b in c
-                         if isinstance(b, dict) and b.get("type") == "text")
-        else:
-            t = c if isinstance(c, str) else ""
-        if t.strip():
-            last = t
-except Exception:
-    sys.exit(0)
+        if re.fullmatch(r"(?:[A-Za-z]:[\\/]|/)[^\r\n]*", line.strip()):
+            continue
+        lines.append(line)
+    return lines
 
-if not last:
-    sys.exit(0)
 
-prose = re.sub(r"```.*?```", "", last, flags=re.S)          # code blocks are free
-prose = "\n".join(l for l in prose.splitlines() if not l.lstrip().startswith("|"))
-lines = [l for l in prose.splitlines() if l.strip()]
+def main():
+    mode = os.environ.get("AGENTSUITE_BREVITY_MODE", "warn")
+    if mode == "off":
+        return
+    try:
+        event = json.load(sys.stdin)
+        if not isinstance(event, dict) or event.get("stop_hook_active"):
+            return
+        lines = prose_lines(last_message(event))
+    except (ValueError, TypeError, AttributeError):
+        return
+    if len(lines) <= 6 and len("\n".join(lines)) <= 700:
+        return
+    reason = "Keep the reply concise. Retain requested detail, blockers, and material verification limits."
+    result = {"decision": "block", "reason": reason} if mode == "block" else {"systemMessage": reason}
+    print(json.dumps(result))
 
-if len(lines) <= MAX_LINES and len(prose) <= MAX_CHARS:
-    sys.exit(0)
 
-print(json.dumps({
-    "decision": "block",
-    "reason": (
-        f"That reply is {len(lines)} lines / {len(prose)} chars of prose. "
-        f"The standing format is:\n\n"
-        f"    Done.\n"
-        f"    Done. Needs you: <one line>\n\n"
-        "Cut it to that. Do not explain what broke, what you changed, or what "
-        "you verified — that belongs in the commit message. Do not apologise "
-        "or comment on your own performance. Keep only: an answer he asked "
-        "for, something blocking him, or a decision that is his."
-    ),
-}))
-sys.exit(0)
+if __name__ == "__main__":
+    main()
