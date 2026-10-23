@@ -47,7 +47,8 @@ def managed_text(text, body):
 
 def repository_plan(target):
     target = target.resolve()
-    if target == SOURCE or SOURCE.is_relative_to(target):
+    source_root = SOURCE.resolve()
+    if target == source_root or source_root.is_relative_to(target):
         raise ValueError("Choose a consumer checkout, not AgentSuite or its parent")
     manifest = target / ".agentsuite/install.json"
     previous = json.loads(manifest.read_text(encoding="utf-8")) if manifest.exists() else {}
@@ -58,7 +59,7 @@ def repository_plan(target):
     # Migrate the old Claude-only sibling import to the shared managed block.
     text = "".join(line for line in text.splitlines(keepends=True)
         if not (line.strip().startswith("@") and
-            (target / line.strip()[1:]).resolve() == SOURCE / "AGENTS.md"))
+            (target / line.strip()[1:]).resolve() == source_root / "AGENTS.md"))
     plan = {agents: managed_text(text, (SOURCE / "AGENTS.md").read_text(encoding="utf-8")).encode()}
     claude = target / "CLAUDE.md"
     text = claude.read_text(encoding="utf-8") if claude.exists() else ""

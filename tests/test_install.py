@@ -49,6 +49,14 @@ class InstallTests(unittest.TestCase):
             install.apply(install.repository_plan(self.target), check=True)
         self.assertEqual(list(self.target.iterdir()), [])
 
+    def test_legacy_import_migration_normalizes_source_path_aliases(self):
+        (self.target / "AGENTS.md").write_text("@../source/AGENTS.md\nLocal rule\n", encoding="utf-8")
+        with patch.object(install, "SOURCE", self.source / "../source"):
+            install.apply(install.repository_plan(self.target))
+        agents = (self.target / "AGENTS.md").read_text(encoding="utf-8")
+        self.assertNotIn("@../source/AGENTS.md", agents)
+        self.assertIn("Local rule", agents)
+
     def test_update_refuses_locally_modified_skills_before_writing(self):
         install.apply(install.repository_plan(self.target))
         edited = self.target / ".agents/skills/fixture/SKILL.md"
