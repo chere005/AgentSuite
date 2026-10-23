@@ -42,9 +42,8 @@ promoting stale doctrine is worse than writing it fresh.
 ## How a project uses one
 
 Copy or symlink it into that project's `.claude/skills/`. There is no
-propagation tooling and there may never need to be — see the TODO in
-`../AGENTS.md` about whether this repo ever wants CoreMind's drift-check
-discipline, or whether "copy it, it's yours now" is good enough at this scale.
+propagation tooling. A copied skill is maintained by the adopting project; a
+symlink continues to use the source here.
 
 A skill is a directory with a `SKILL.md` whose frontmatter carries `name` and
 `description`. The description is what Claude reads to decide whether the skill

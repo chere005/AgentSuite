@@ -48,10 +48,8 @@ Two levels, pick what fits:
    a silent one.
 
 Skills: symlink or copy the ones a project needs into its own
-`.claude/skills/`. There's no propagation tooling yet — see the TODO in
-`AGENTS.md` about whether this repo ever needs a CoreMind-style
-drift-check, or whether "copy it, it's yours now" is good enough at
-this scale.
+`.claude/skills/`. There is no propagation tooling. A copied skill is
+maintained by the adopting project; a symlink continues to use the source here.
 
 ## Status
 
