@@ -11,6 +11,11 @@ The token is read from $TODO_TOKEN or ~/.config/seancheren/todo-token; $TODO_API
 """
 import argparse, json, os, subprocess, sys, urllib.error, urllib.parse, urllib.request
 
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
 API = os.environ.get("TODO_API", "https://seancheren.com/todo/api.php")
 
 
@@ -22,24 +27,38 @@ def token() -> str:
                 t = f.read().strip()
         except OSError:
             sys.exit("todo: no token ($TODO_TOKEN or ~/.config/seancheren/todo-token)")
+    t = t.strip()
+    if not t or any(ord(char) < 33 or ord(char) > 126 for char in t):
+        sys.exit("todo: token is empty or contains invalid characters")
     return t
 
 
 def call(method: str, query: dict, body=None) -> dict:
+    endpoint = urllib.parse.urlsplit(API)
+    if (endpoint.scheme != "https" and not
+            (endpoint.scheme == "http" and endpoint.hostname in {"localhost", "127.0.0.1", "::1"})):
+        sys.exit("todo: API must use HTTPS (HTTP is allowed only for local fixtures)")
+    if not endpoint.hostname or endpoint.username or endpoint.password or endpoint.query or endpoint.fragment:
+        sys.exit("todo: invalid API endpoint")
     url = API + ("?" + urllib.parse.urlencode(query) if query else "")
+    credential = token()
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(url, data=data, method=method, headers={
-        "Authorization": "Bearer " + token(), "X-Todo-Token": token(), "Content-Type": "application/json",
-        "X-Claudio": "1"})
+        "Authorization": "Bearer " + credential, "X-Todo-Token": credential,
+        "Content-Type": "application/json", "X-Claudio": "1"})
     try:
-        with urllib.request.urlopen(req, timeout=20) as r:
-            return json.load(r)
-    except urllib.error.HTTPError as e:
-        try:
-            msg = json.load(e).get("error", "")
-        except Exception:
-            msg = ""
-        sys.exit(f"todo: {e.code} {msg}".rstrip())
+        # No automatic POST retries or credential-bearing redirects.
+        with urllib.request.build_opener(NoRedirect()).open(req, timeout=20) as response:
+            result = json.load(response)
+    except urllib.error.HTTPError as error:
+        sys.exit(f"todo: HTTP {error.code}; check authentication and the API endpoint")
+    except (urllib.error.URLError, TimeoutError, OSError):
+        sys.exit("todo: request failed; check the network and endpoint before retrying")
+    except (ValueError, UnicodeError):
+        sys.exit("todo: API returned invalid JSON")
+    if not isinstance(result, dict) or result.get("ok") is not True:
+        sys.exit("todo: API did not confirm success")
+    return result
 
 
 def source() -> str:
@@ -62,7 +81,10 @@ def main() -> None:
 
     if a.cmd == "list":
         r = call("GET", {"op": "list", "repo": a.repo})
-        for t in r.get("tickets", []):
+        tickets = r.get("tickets")
+        if not isinstance(tickets, list) or any(not isinstance(t, dict) or not {"n", "kind", "title", "priority", "status"} <= t.keys() for t in tickets):
+            sys.exit("todo: invalid ticket list")
+        for t in tickets:
             where = t["project"] + " " if t.get("project") else ""
             pri = " (" + t["priority"] + ")" if t["priority"] != "normal" else ""
             print(f"#{t['n']:<4} {where}{t['kind']}: {t['title']}{pri}" + (" [doing]" if t["status"] == "doing" else ""))
@@ -75,7 +97,10 @@ def main() -> None:
     else:
         prop = {"action": "done", "n": a.n, "note": a.note}
     r = call("POST", {}, {"op": "propose", "from": source(), "proposals": [prop]})
-    res = (r.get("results") or [""])[0]
+    results = r.get("results")
+    if not isinstance(results, list) or len(results) != 1 or not isinstance(results[0], str):
+        sys.exit("todo: invalid proposal result; check the Inbox before retrying")
+    res = results[0]
     if res.startswith("!"):
         sys.exit("todo: refused: " + res[1:])
     print("queued for Sean's approval" if r.get("queued") else "nothing to do: already queued, on the board, or done")

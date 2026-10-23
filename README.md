@@ -1,58 +1,67 @@
 # AgentSuite
 
-Sean's shared home for how AI coding agents should work across every
-project — not an app, not a library. A place to write something once
-(a convention, a skill, a tool) instead of re-discovering it per repo.
+Shared instructions, three reusable skills and setup tools for Sean's projects.
 
-Grew out of the Mind-suite (CalMind / ChefMind / AcctMind / MyCalMind /
-CoreMind), where the same lessons — how to write an `AGENTS.md` that
-actually gets read, which skills earn their keep, what a "traps" section
-is for — kept getting re-learned independently in each repo. This is
-where they live once, instead.
+| Material | Purpose |
+| --- | --- |
+| [AGENTS.md](AGENTS.md) | Durable working agreements |
+| [skills](skills/README.md) | PHP web work, NearlyFreeSpeech hosting and machine bootstrap |
+| [tools/install.py](tools/install.py) | Install the baseline and skills into a consumer checkout |
+| [hooks/brevity.py](hooks/brevity.py) | Optional Claude response-length reminder |
+| [tools/todo](tools/todo) | Read tickets and propose changes to the Inbox |
 
-## What's here
+## Install or update a consumer
 
-- **`AGENTS.md`** — the baseline conventions and standing rules a new
-  project should start from — and, since 2026-08-23, the imported baseline
-  every Mind-suite repo's own AGENTS.md stacks on top of.
-- **`skills/`** — reusable Claude Code skills worth having in more than
-  one project. Each is a candidate to promote out of whichever repo
-  first needed it.
-  One of them, `bootstrap`, is about the machine rather than a project:
-  it carries the script that takes a bare box to where all of this can be
-  cloned, built and shipped.
+Python 3.10+ is required. Run from the AgentSuite checkout:
 
-## How another project uses this
+```sh
+python3 tools/install.py repo ../CalMind --dry-run
+python3 tools/install.py repo ../CalMind
+python3 tools/install.py repo ../CalMind --check
+```
 
-Two levels, pick what fits:
+On Windows use a working Python interpreter (`py -3` if configured). Installation uses ordinary files and works without symlink privileges. It:
 
-1. **Full import** — a new project's own `CLAUDE.md` (or `AGENTS.md`)
-   starts with an `@` import of this repo's baseline, the same way each
-   Mind-suite app's `CLAUDE.md` is just `@AGENTS.md`:
+- Adds a managed block to the consumer's `AGENTS.md`, leaving local instructions outside it intact. Codex loads the contents directly; a sibling `@` import is not sufficient.
+- Adds `@AGENTS.md` to `CLAUDE.md` if missing.
+- Copies skills into `.agents/skills` for Codex and `.claude/skills` for Claude. `.agentsuite/install.json` records the installed hashes. Updates refuse to overwrite a locally modified skill; `--check` reports missing or stale files.
 
-   ```
-   @../AgentSuite/AGENTS.md
-   ```
+Keep these generated files with the consumer if its agents need to work without a sibling AgentSuite checkout. Edit shared material here and rerun the installer. Use local instructions for deliberate project differences. Existing skill symlinks are left alone with an error; migrate them explicitly instead of writing through them.
 
-   (adjust the relative path to wherever this checkout actually sits
-   next to the project). The project's own `AGENTS.md` then only needs
-   to state what's specific to it — the baseline comes along for free,
-   and gets picked up in the SAME BYTES sense CoreMind uses for canon:
-   edit it here, every importing project sees the update next session.
+Skills can also be managed manually in a consumer's `.claude/skills/`: a copied skill is maintained by the adopting project, while a symlink continues to use the source in this checkout.
 
-2. **Reference, don't import** — for a project that wants to adapt
-   rather than inherit wholesale, just link to this repo in its own
-   docs ("see AgentSuite's AGENTS.md for the baseline traps-section
-   convention") and copy down whatever's actually relevant, same as
-   CoreMind's `fork` rows: a deliberate, tracked divergence rather than
-   a silent one.
+Discovery rules verified against [OpenAI Docs: instructions](https://learn.chatgpt.com/docs/agent-configuration/agents-md), [skills](https://learn.chatgpt.com/docs/build-skills) and [Claude memory](https://code.claude.com/docs/en/memory), 2026-10-22. The offline tests check the installed layout and contents; they do not launch paid agent sessions. After installing, use Claude `/context` or ask a fresh Codex session to list its loaded instruction sources to confirm live discovery in your installed version.
 
-Skills: symlink or copy the ones a project needs into its own
-`.claude/skills/`. There is no propagation tooling. A copied skill is
-maintained by the adopting project; a symlink continues to use the source here.
+## Optional brevity hook
 
-## Status
+```sh
+python3 tools/install.py hook ~/.claude --dry-run
+python3 tools/install.py hook ~/.claude
+python3 tools/install.py hook ~/.claude --check
+```
 
-Settled on 2026-08-23: the AGENTS.md here stopped being a stub when the
-common rules were factored up out of the six repos that had been repeating
-them, and the first two skills were promoted from seancheren-site.
+This preserves other settings and hooks, replaces the previous AgentSuite hook entry and uses the current Python executable. Default mode is an advisory warning so a requested explanation is not suppressed. Set `AGENTSUITE_BREVITY_MODE=block` for a strict six-line/700-character limit, or `off` to disable it. Fenced code, table rows and standalone absolute paths do not count. The hook reads `last_assistant_message` before falling back to older transcripts; continuations are never blocked twice. See [Claude Stop input](https://code.claude.com/docs/en/hooks#stop-input), checked 2026-10-22.
+
+## Ticket client
+
+```sh
+python3 tools/todo list AgentSuite
+python3 tools/todo add AgentSuite bug "Title" -n "Evidence and completion criteria"
+python3 tools/todo done 123 -n "Verified result"
+```
+
+Provide `TODO_TOKEN` or `~/.config/seancheren/todo-token`. `TODO_API` can override the endpoint. HTTPS is required except for loopback test servers. Requests are not automatically retried: after an ambiguous proposal failure, check the Inbox before retrying.
+
+## Checks
+
+```sh
+python3 -B tools/check.py
+```
+
+Uses Python 3.10+, Bash and Node.js. On Windows Git Bash is detected automatically, or set `BASH_EXE` to its executable. All checks are offline and use temporary fixtures and command stubs. CI runs the same command on Windows, macOS and Linux. The package-manager recipes are not executed by these checks; validate a real machine's setup before calling that platform ready.
+
+## Suite releases
+
+For projects using the Mind-suite lane, `dtp` means deploy, tag, push; `tdtp` includes the full test run. Defaults: target `main`, bare `x.y.0` tags and a minor bump. A project's explicit release conventions override these defaults (PrivateApp uses `v` tags). Never tag around a failed deploy; reuse a bumped but untagged version. Report through CoreMind's `bin/report-status.sh` when that project uses it; reporting failure must not hide release failure.
+
+Keep mail stubs disabled until Sean authorizes enabling delivery for the affected host. These are suite release conventions, not requirements for unrelated repositories.
