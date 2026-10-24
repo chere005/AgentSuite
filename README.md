@@ -1,11 +1,11 @@
 # AgentSuite
 
-Shared instructions, three reusable skills and setup tools for Sean's projects.
+Shared instructions, reusable skills and setup tools for Sean's projects.
 
 | Material | Purpose |
 | --- | --- |
 | [AGENTS.md](AGENTS.md) | Durable working agreements |
-| [skills](skills/README.md) | PHP web work, NearlyFreeSpeech hosting and machine bootstrap |
+| [skills](skills/README.md) | PHP web work, NearlyFreeSpeech hosting, machine bootstrap, Electron/TypeScript/React and UI/UX design |
 | [tools/install.py](tools/install.py) | Install the baseline and skills into a consumer checkout |
 | [hooks/brevity.py](hooks/brevity.py) | Optional Claude response-length reminder |
 | [tools/todo](tools/todo) | Read tickets and propose changes to the Inbox |

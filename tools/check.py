@@ -25,8 +25,11 @@ def validate_material(root):
             errors.append(f"{skill}: invalid name")
         if not values.get("description") or len(values["description"]) > 1024:
             errors.append(f"{skill}: missing or oversized description")
+    # Vendored skills (a SOURCE.md beside SKILL.md) are upstream copies kept unchanged; their
+    # code samples look like links, so only AgentSuite's own Markdown is link-checked.
+    vendored = {skill.parent for skill in (root / "skills").glob("*/SOURCE.md")}
     for path in root.rglob("*.md"):
-        if ".git" in path.relative_to(root).parts:
+        if ".git" in path.relative_to(root).parts or any(v in path.parents for v in vendored):
             continue
         text = path.read_text(encoding="utf-8")
         for raw in re.findall(r"\[[^\]\n]*\]\(([^)\n]+)\)", text):
