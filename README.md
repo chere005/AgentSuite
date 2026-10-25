@@ -5,7 +5,7 @@ Shared instructions, reusable skills and setup tools for Sean's projects.
 | Material | Purpose |
 | --- | --- |
 | [AGENTS.md](AGENTS.md) | Durable working agreements |
-| [skills](skills/README.md) | PHP web work, NearlyFreeSpeech hosting, machine bootstrap, Electron/TypeScript/React and UI/UX design |
+| [skills](skills/README.md) | PHP web work, NearlyFreeSpeech hosting, machine bootstrap, GitHub Releases, Electron/TypeScript/React and UI/UX design |
 | [tools/install.py](tools/install.py) | Install the baseline and skills into a consumer checkout |
 | [hooks/brevity.py](hooks/brevity.py) | Optional Claude response-length reminder |
 | [tools/todo](tools/todo) | Read tickets and propose changes to the Inbox |
@@ -62,6 +62,6 @@ Uses Python 3.10+, Bash and Node.js. On Windows Git Bash is detected automatical
 
 ## Suite releases
 
-For projects using the Mind-suite lane, `dtp` means deploy, tag, push; `tdtp` includes the full test run. Defaults: target `main`, bare `x.y.0` tags and a minor bump. A project's explicit release conventions override these defaults (PrivateApp uses `v` tags). Never tag around a failed deploy; reuse a bumped but untagged version. Report through CoreMind's `bin/report-status.sh` when that project uses it; reporting failure must not hide release failure.
+For projects using the Mind-suite lane, `dtp` means deploy, tag, push; `tdtp` includes the full test run. Defaults: target `main`, bare `x.y.0` tags and a minor bump. A project's explicit release conventions override these defaults (some projects use `v` tags). Never tag around a failed deploy; reuse a bumped but untagged version. Report through CoreMind's `bin/report-status.sh` when that project uses it; reporting failure must not hide release failure.
 
 Keep mail stubs disabled until Sean authorizes enabling delivery for the affected host. These are suite release conventions, not requirements for unrelated repositories.

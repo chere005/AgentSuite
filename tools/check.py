@@ -60,8 +60,8 @@ def main():
         errors.append("Node.js is required; set NODE_EXE to its executable")
     if errors:
         sys.exit("\n".join(errors))
-    subprocess.run([bash, "--noprofile", "--norc", "-n",
-        str(ROOT / "skills/bootstrap/bootstrap.sh")], check=True)
+    for script in ("skills/bootstrap/bootstrap.sh", "skills/make-deployment/templates/preflight.sh"):
+        subprocess.run([bash, "--noprofile", "--norc", "-n", str(ROOT / script)], check=True)
     environment = {**os.environ, "BASH_EXE": bash, "NODE_EXE": node, "PYTHONDONTWRITEBYTECODE": "1"}
     result = subprocess.run([sys.executable, "-B", "-m", "unittest", "discover", "-s", "tests", "-v"],
         cwd=ROOT, env=environment)

@@ -5,6 +5,7 @@
 | [web-dev](web-dev/SKILL.md) | Plain PHP and browser JavaScript changes |
 | [nearlyfreespeech](nearlyfreespeech/SKILL.md) | NearlyFreeSpeech deployment and host configuration |
 | [bootstrap](bootstrap/SKILL.md) | Machine setup with the bundled bootstrap script |
+| [make-deployment](make-deployment/SKILL.md) | GitHub Releases with installer builds, safe preflight, and release-lane integration |
 | [electron-desktop](electron-desktop/SKILL.md) | Electron main/preload/renderer security, IPC, packaging and desktop tests (written here; no well-rated public Electron skill exists) |
 
 Vendored from well-rated public sources, unchanged, each with `SOURCE.md` (repository and pinned commit) and its license. Re-vendor to update; do not edit in place.
