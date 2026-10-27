@@ -30,7 +30,7 @@ python3 -B tools/check.py                    # offline checks
 
 ## Notes
 
-- Four skills: PHP web work, NearlyFreeSpeech hosting, machine bootstrap, GitHub Releases deployment. See [skills/](skills/README.md).
+- Five of our own skills (PHP web work, NearlyFreeSpeech hosting, machine bootstrap, GitHub Releases deployment, Electron) plus three vendored from Anthropic and Vercel. See [skills/](skills/README.md).
 - The hook warns past six prose lines or 700 characters; `AGENTSUITE_BREVITY_MODE=block` refuses, `off` disables.
 - `tools/todo` needs `TODO_TOKEN` or `~/.config/seancheren/todo-token`; it only proposes, Sean approves in the Inbox.
 - Release shorthand: **`tdtp`** = test, deploy, tag, push (full tests first); **`dtp`** = deploy, tag, push (only the tests the change needs). Both end with the new version installed on Sean's machine. Typing either authorizes that repo's release only.
