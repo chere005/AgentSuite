@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Propose changes to Sean's ticket board (seancheren.com/todo). Nothing changes until he approves it in the Inbox.
+"""Propose changes to Sean's tickets in TaskMind (seancheren.com/taskmind). Nothing changes until he approves them under Proposals.
 
   todo list [REPO]                              open tickets (all, or one repo's), with their numbers
   todo add REPO KIND "TITLE" [-n NOTES] [-p high|normal|low]
@@ -16,7 +16,7 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         return None
 
-API = os.environ.get("TODO_API", "https://seancheren.com/todo/api.php")
+API = os.environ.get("TODO_API", "https://seancheren.com/taskmind/tickets.php")
 
 
 def token() -> str:
@@ -99,7 +99,7 @@ def main() -> None:
     r = call("POST", {}, {"op": "propose", "from": source(), "proposals": [prop]})
     results = r.get("results")
     if not isinstance(results, list) or len(results) != 1 or not isinstance(results[0], str):
-        sys.exit("todo: invalid proposal result; check the Inbox before retrying")
+        sys.exit("todo: invalid proposal result; check Proposals before retrying")
     res = results[0]
     if res.startswith("!"):
         sys.exit("todo: refused: " + res[1:])
