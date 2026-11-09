@@ -117,6 +117,10 @@ class CheckWorkflowsTests(unittest.TestCase):
         out = self.check(GOOD, {"tools/lane.sh": "echo retry\ngh run rerun 123 --failed\n"})
         self.assertIn("tools/lane.sh:2: `gh run rerun`", out)
 
+    def test_gh_run_cancel_in_a_script(self):
+        out = self.check(GOOD, {"scripts/preflight.sh": "gh run cancel \"$run\"\n"})
+        self.assertIn("scripts/preflight.sh:1: `gh run cancel`", out)
+
     def test_this_repository_complies(self):
         errors, count = cw.check_repo(ROOT)
         self.assertEqual(errors, [])

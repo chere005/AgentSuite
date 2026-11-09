@@ -18,7 +18,7 @@ The contract therefore removes the person from the run that does the work:
    `needs` such a job and uses no `always()`, `failure()` or `cancelled()` without that check.
 3. **Every job is `continue-on-error: true`**, literally. The bot's run stays green, and scripts read each job's and
    step's conclusion. A green run can contain failed jobs.
-4. **Nothing is cancelled for us.** Never set `cancel-in-progress: true`. A handoff run gets a concurrency group of its
+4. **Nothing is cancelled for us.** Never set `cancel-in-progress: true`, and never `gh run cancel` from a script. A handoff run gets a concurrency group of its
    own (`format('handoff-{0}', github.run_id)`) so it never waits behind, or gets cancelled by, the bot's run.
 5. **Only `push`, `workflow_dispatch` and `workflow_call` triggers.** A `schedule` mails the workflow's author, and a
    `pull_request` run cannot hand off. Every workflow keeps `workflow_dispatch`, because the handoff needs it.
@@ -39,7 +39,7 @@ python3 ~/GIT/AgentSuite/tools/check-workflows.py .        # in a repo; exit 1 l
 git config core.hooksPath ../AgentSuite/githooks           # once per checkout: pre-push runs the check
 ```
 
-The check reads `.github/workflows/*.yml` with PyYAML or Ruby's YAML. It also flags `gh run rerun` in tracked scripts.
+The check reads `.github/workflows/*.yml` with PyYAML or Ruby's YAML. It also flags `gh run rerun` and `gh run cancel` in tracked scripts.
 A repo with hooks of its own, such as AgentTeam's `.githooks/pre-push`, calls the checker from that hook.
 
 ## Finding the bot's run

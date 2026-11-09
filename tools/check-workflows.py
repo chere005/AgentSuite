@@ -168,7 +168,7 @@ def check_workflow(path):
 
 
 def check_scripts(root):
-    """`gh run rerun` re-runs as the person (the bot-only jobs then skip and nothing is rebuilt)."""
+    """`gh run rerun` re-runs as the person (the bot-only jobs then skip); `gh run cancel` makes a cancelled run."""
     errors = []
     try:
         listed = subprocess.run(["git", "-C", str(root), "ls-files", "-z"], capture_output=True, text=True, check=True)
@@ -191,6 +191,9 @@ def check_scripts(root):
             if re.search(r"\bgh\s+run\s+rerun\b", line):
                 errors.append(f"{rel}:{n}: `gh run rerun` runs as you, so the bot-only jobs skip: re-dispatch instead "
                               "(gh workflow run <file> --ref <ref> -f ...; its handoff job passes it to the bot)")
+            if re.search(r"\bgh\s+run\s+cancel\b", line):
+                errors.append(f"{rel}:{n}: `gh run cancel` makes a cancelled run, and GitHub mails cancelled runs like "
+                              "failed ones: let the bot's run finish (its jobs are continue-on-error)")
     return errors
 
 
