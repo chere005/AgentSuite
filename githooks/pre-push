@@ -4,16 +4,14 @@
 # or be cancelled mails whoever triggered it. Then runs the repo's own .git/hooks/pre-push, if it has one.
 here=$(cd "$(dirname "$0")/.." && pwd)
 root=$(git rev-parse --show-toplevel)
-if [ -d "$root/.github/workflows" ] || [ -d "$root/tools" ] || [ -d "$root/scripts" ]; then
-  py=$(command -v python3 || command -v python || true)
-  if [ -z "$py" ]; then
-    echo "pre-push: python3 is needed to check the workflows (AgentSuite/ci.md); refusing" >&2
-    exit 1
-  fi
-  if ! "$py" "$here/tools/check-workflows.py" "$root"; then
-    echo "pre-push: refused - fix the above (AgentSuite/ci.md) so no run can mail a failure" >&2
-    exit 1
-  fi
+py=$(command -v python3 || command -v python || true)
+if [ -z "$py" ]; then
+  echo "pre-push: python3 is needed to check the workflows (AgentSuite/ci.md); refusing" >&2
+  exit 1
+fi
+if ! "$py" "$here/tools/check-workflows.py" "$root"; then
+  echo "pre-push: refused - fix the above (AgentSuite/ci.md) so no run can mail a failure" >&2
+  exit 1
 fi
 own="$(git rev-parse --git-common-dir)/hooks/pre-push"
 [ -x "$own" ] && exec "$own" "$@"
