@@ -1,3 +1,4 @@
+# "Hand off to the bot" is skipped in the bot's run and is exempt in preflight.sh; do not list it.
 Tag, notes and the draft release
 mac (arm64)
 mac (x64)

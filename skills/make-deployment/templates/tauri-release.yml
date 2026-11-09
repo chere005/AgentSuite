@@ -12,16 +12,24 @@
 #   publish  (ubuntu)   every expected file is on the draft; SHA256SUMS.txt is added; the release is published (Latest; a
 #                       version containing "-" is a pre-release). A missing file leaves the release a DRAFT.
 #
-# A failed build job leaves the release a draft nobody sees: fix it, then re-run the failed jobs (publish runs after them).
-# A published release is never rebuilt. README.md ("Releases") says how to cut one, release an old tag, and preflight.
+# A failed build job leaves the release a draft nobody sees: publish retries a missing platform itself (see QUIET CI), or
+# release the tag again: gh workflow run release.yml --ref <tag> -f tag=<tag> (never `gh run rerun`). A published release is never rebuilt.
+# README.md ("Releases") says how to cut one, release an old tag, and preflight.
 #
 # NO actions/upload-artifact OR download-artifact ANYWHERE: the account's Actions artifact storage quota is full ("Failed to
 # CreateArtifact: Artifact storage quota has been hit"), which failed every desktop-windows run of 2026-10-22/23. Release
 # assets do not count against it. The build tool never uploads either: `gh release upload` does.
 #
 # PREFLIGHT (workflow_dispatch with preflight=true; tools/preflight.sh does it): the same builds on the commit about to be
-# tagged, with every job `continue-on-error` (a red job does not make the RUN red, so GitHub sends no failed-job email), no
-# release created, nothing uploaded; the run summary lists each job's result. Real runs stay strict.
+# tagged, no release created, nothing uploaded; the run summary lists each job's result.
+#
+# QUIET CI (AgentSuite/ci.md; `python3 ../AgentSuite/tools/check-workflows.py .` checks it). GitHub mails a run's outcome
+# to whoever TRIGGERED it. So a run a person starts (the tag push, `gh workflow run`, a re-run) only runs `handoff`, which
+# re-dispatches this workflow as github-actions[bot] (GITHUB_TOKEN); the bot's run does the work, and nobody is mailed
+# whatever happens to it - a red test, a flaky smoke, a runner GitHub never provides, a timeout. Every job is also
+# `continue-on-error`, so even the bot's run stays green; the scripts (tools/preflight.sh, the lane) read each job.
+# A release run that ends with a platform missing re-dispatches itself (input `attempt`, at most 3 runs) and builds only
+# the platforms whose files are not on the draft yet; after the third it leaves the draft for the lane to report.
 #
 # Unsigned: SmartScreen on Windows (More info > Run anyway), Gatekeeper on the Mac (right-click > Open, or Privacy &
 # Security > Open Anyway). The notes say so.
@@ -37,17 +45,23 @@ on:
         required: false
         type: string
       preflight:
-        description: "Preflight: build everything, publish nothing, never fail the run"
+        description: "Preflight: build everything, publish nothing"
         required: false
         default: false
         type: boolean
+      attempt:
+        description: "Set by the release itself when it retries a missing platform (1 = the first run)"
+        required: false
+        default: "1"
+        type: string
 
 permissions:
   contents: write
   actions: read
 
+# A person's run (handoff only) gets a group of its own: it must never queue behind, or be cancelled by, the bot's run.
 concurrency:
-  group: ${{ inputs.preflight && 'preflight-' || 'release-' }}${{ github.event_name == 'push' && github.ref_name || inputs.tag || github.sha }}
+  group: ${{ github.triggering_actor != 'github-actions[bot]' && format('handoff-{0}', github.run_id) || format('{0}{1}', inputs.preflight && 'preflight-' || 'release-', inputs.tag || github.sha) }}
   cancel-in-progress: false
 
 env:
@@ -57,14 +71,55 @@ env:
   PREFLIGHT: ${{ inputs.preflight == true && 'true' || 'false' }}
 
 jobs:
+  # A person's run does only this: hand the same work to the bot (see QUIET CI above). Identical in every workflow.
+  handoff:
+    name: Hand off to the bot
+    if: github.triggering_actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    continue-on-error: true
+    permissions:
+      actions: write
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      INPUTS: ${{ toJSON(inputs) }}
+      # What a push hands over: a tag push releases that tag.
+      PUSH_INPUTS: ${{ github.ref_type == 'tag' && format('{{"tag":"{0}"}}', github.ref_name) || '{}' }}
+    steps:
+      - name: Dispatch this workflow as github-actions[bot]
+        shell: bash
+        run: |
+          set -euo pipefail
+          wf="${GITHUB_WORKFLOW_REF%%@*}"; wf="${wf##*/}"
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then json="$INPUTS"; else json="$PUSH_INPUTS"; fi
+          [ -n "$json" ] && [ "$json" != null ] || json='{}'
+          json=$(jq -c 'with_entries(select(.value != null) | .value |= tostring)' <<< "$json")
+          echo "dispatching $wf at $GITHUB_REF_NAME with $json"
+          for i in 1 2 3 4 5; do
+            if gh workflow run "$wf" --repo "$GITHUB_REPOSITORY" --ref "$GITHUB_REF_NAME" --json <<< "$json"; then
+              echo "### Handed off to github-actions[bot]" >> "$GITHUB_STEP_SUMMARY"
+              echo "The work runs in the bot's run of $wf on $GITHUB_REF_NAME (Actions tab)." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            sleep $((i * 10))
+          done
+          echo "::error title=Handoff failed::could not dispatch $wf; nothing was built"
+          exit 1
+
   prepare:
     name: Tag, notes and the draft release
+    if: github.triggering_actor == 'github-actions[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    continue-on-error: ${{ inputs.preflight == true }}
+    continue-on-error: true
     outputs:
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
+      # A retry builds only what the draft still lacks ("true" = build it). Preflight builds everything.
+      need_windows: ${{ steps.draft.outputs.need_windows || 'true' }}
+      need_macos: ${{ steps.draft.outputs.need_macos || 'true' }}
+      need_linux: ${{ steps.draft.outputs.need_linux || 'true' }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -150,6 +205,7 @@ jobs:
           cat "$file"
 
       - name: The draft release for the tag
+        id: draft
         if: env.PREFLIGHT != 'true'
         shell: bash
         env:
@@ -179,13 +235,23 @@ jobs:
           else
             gh release create "$TAG" --draft --verify-tag --title "$title" --notes-file "$notes"
           fi
+          # A retry (or a re-dispatch) builds only the platforms whose files are not on the draft yet.
+          names=$(gh release view "$TAG" --json assets --jq '.assets[].name')
+          has() { printf '%s\n' "$names" | grep -Eq "$1"; }
+          v=$(printf '%s' "$VERSION" | sed 's/\./\\./g')
+          if has "^ExampleApp_${v}_x64.*\.msi$" && has "^ExampleApp_${v}_x64.*-setup\.exe$"; then w=false; else w=true; fi
+          if has "^ExampleApp_${v}_aarch64\.dmg$"; then m=false; else m=true; fi
+          if has "^ExampleApp_${v}_amd64\.deb$" && has "^ExampleApp_${v}_amd64\.AppImage$"; then l=false; else l=true; fi
+          echo "build: windows=$w macos=$m linux=$l"
+          { echo "need_windows=$w"; echo "need_macos=$m"; echo "need_linux=$l"; } >> "$GITHUB_OUTPUT"
 
   windows:
     name: Windows msi + exe
     needs: prepare
+    if: needs.prepare.outputs.need_windows == 'true'
     runs-on: windows-latest
     timeout-minutes: 60
-    continue-on-error: ${{ inputs.preflight == true }}
+    continue-on-error: true
     env:
       VERSION: ${{ needs.prepare.outputs.version }}
       TAG: ${{ needs.prepare.outputs.tag }}
@@ -292,10 +358,11 @@ jobs:
   macos:
     name: macOS dmg (Apple silicon)
     needs: prepare
+    if: needs.prepare.outputs.need_macos == 'true'
     # macos-15 runners are Apple-silicon Macs: the dmg is arm64, nothing is built for Intel.
     runs-on: macos-15
     timeout-minutes: 90
-    continue-on-error: ${{ inputs.preflight == true }}
+    continue-on-error: true
     env:
       VERSION: ${{ needs.prepare.outputs.version }}
       TAG: ${{ needs.prepare.outputs.tag }}
@@ -403,11 +470,12 @@ jobs:
   linux:
     name: Linux deb + AppImage
     needs: prepare
+    if: needs.prepare.outputs.need_linux == 'true'
     # Pinned to 24.04, not ubuntu-latest: a label that moves under a release lane brings a new base distro on a Tuesday.
     # The deb links noble's glibc, so it installs on noble or newer.
     runs-on: ubuntu-24.04
     timeout-minutes: 60
-    continue-on-error: ${{ inputs.preflight == true }}
+    continue-on-error: true
     env:
       VERSION: ${{ needs.prepare.outputs.version }}
       TAG: ${{ needs.prepare.outputs.tag }}
@@ -516,22 +584,34 @@ jobs:
             exit 1
           fi
 
+          # A live Xvfb process is not yet a display that accepts clients: 1.49.0's smoke died "Failed to initialize
+          # GTK" two seconds after Xvfb started. Wait until a client can actually connect.
           Xvfb :99 -screen 0 1280x800x24 >/tmp/xvfb.log 2>&1 &
           XVFB=$!
-          sleep 2
-          if ! kill -0 "$XVFB" 2>/dev/null; then
-            echo "Xvfb did not start:"; cat /tmp/xvfb.log; exit 1
-          fi
           export DISPLAY=:99
+          for _ in $(seq 1 30); do
+            xdotool getdisplaygeometry >/dev/null 2>&1 && break
+            kill -0 "$XVFB" 2>/dev/null || { echo "Xvfb exited:"; cat /tmp/xvfb.log; exit 1; }
+            sleep 1
+          done
+          xdotool getdisplaygeometry >/dev/null 2>&1 || { echo "Xvfb never accepted a client:"; cat /tmp/xvfb.log; exit 1; }
 
-          "$BIN" >/tmp/exampleapp.log 2>&1 &
-          APP=$!
-          sleep 8
-          if ! kill -0 "$APP" 2>/dev/null; then
+          # A GTK that cannot reach the display is the harness, not the app: try that case three times; any other early
+          # exit fails at once.
+          for try in 1 2 3; do
+            "$BIN" >/tmp/exampleapp.log 2>&1 &
+            APP=$!
+            sleep 8
+            kill -0 "$APP" 2>/dev/null && break
+            if grep -q "Failed to initialize GTK" /tmp/exampleapp.log && [ "$try" -lt 3 ]; then
+              echo "launch $try: GTK could not reach the display; trying again"
+              sleep 3
+              continue
+            fi
             echo "the installed app exited within 8 seconds:"
             cat /tmp/exampleapp.log
             exit 1
-          fi
+          done
           WIN=""
           for _ in 1 2 3; do
             WIN=$(xdotool search --name ExampleApp 2>/dev/null | head -1 || true)
@@ -567,18 +647,27 @@ jobs:
           mapfile -t files < "$RUNNER_TEMP/attach.txt"
           gh release upload "$TAG" "${files[@]}" --clobber
 
+  # always(): a build job a retry skipped (its files are already there) or one GitHub never gave a runner must not skip
+  # this. A prepare that failed produced no version: nothing to publish, nothing worth retrying.
   publish:
     name: publish
     needs: [prepare, windows, macos, linux]
-    if: ${{ inputs.preflight != true }}
+    if: ${{ always() && github.triggering_actor == 'github-actions[bot]' && inputs.preflight != true && needs.prepare.outputs.version != '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    continue-on-error: true
+    permissions:
+      contents: write
+      actions: write
     env:
       VERSION: ${{ needs.prepare.outputs.version }}
       TAG: ${{ needs.prepare.outputs.tag }}
+      ATTEMPT: ${{ inputs.attempt || '1' }}
+      MAX_ATTEMPTS: "3"
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Every expected file is on the release
+        id: files
         shell: bash
         run: |
           set -euo pipefail
@@ -599,11 +688,32 @@ jobs:
           want "ExampleApp_${VERSION}_amd64.deb"       "Linux deb"
           want "ExampleApp_${VERSION}_amd64.AppImage"  "Linux AppImage"
           if [ -n "$missing" ]; then
-            echo "::error title=Release incomplete::Missing:${missing}. The release stays a draft."
+            echo "Missing:${missing}"
+            echo "complete=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "complete=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # A platform is missing: dispatch this workflow again for the same tag (as the bot, so a retry mails nobody either);
+      # its prepare builds only what is still missing. After MAX_ATTEMPTS runs the draft stays for the lane to report.
+      - name: Retry what is missing
+        if: steps.files.outputs.complete != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          wf="${GITHUB_WORKFLOW_REF%%@*}"; wf="${wf##*/}"
+          if [ "$ATTEMPT" -lt "$MAX_ATTEMPTS" ]; then
+            next=$((ATTEMPT + 1))
+            gh workflow run "$wf" --repo "$GITHUB_REPOSITORY" --ref "$TAG" -f "tag=$TAG" -f "attempt=$next"
+            echo "### Run $ATTEMPT of $MAX_ATTEMPTS left a platform missing; run $next builds it" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### ${TAG} is still missing a platform after ${MAX_ATTEMPTS} runs: it stays a draft" >> "$GITHUB_STEP_SUMMARY"
+            echo "::error title=Release incomplete::${TAG} is missing a platform after ${MAX_ATTEMPTS} runs; the release stays a draft."
             exit 1
           fi
 
       - name: Checksums
+        if: steps.files.outputs.complete == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -615,6 +725,7 @@ jobs:
           gh release upload "$TAG" "$RUNNER_TEMP/SHA256SUMS.txt" --clobber
 
       - name: Publish
+        if: steps.files.outputs.complete == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -625,13 +736,14 @@ jobs:
           fi
           gh release view "$TAG" --json url --jq .url
 
-  # Preflight only: say how each job went in the run summary. Never fails (that is the point of a preflight).
+  # Preflight only: say how each job went in the run summary.
   summary:
     name: Preflight summary
     needs: [prepare, windows, macos, linux]
-    if: ${{ always() && inputs.preflight == true }}
+    if: ${{ always() && github.triggering_actor == 'github-actions[bot]' && inputs.preflight == true }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    continue-on-error: true
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:

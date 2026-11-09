@@ -28,13 +28,13 @@ exit 0
 printf 'gh %s\\n' "$*" >> "$FIXTURE_LOG"
 case "$1 $2" in
   'workflow run') if [ "$SCENARIO" = dispatch-failure ]; then exit 1; fi ;;
-  'run list') echo 9001 ;;
+  api\\ repos/*/runs\\?head_sha=*) echo 9001 ;;
   'run watch') ;;
   'run view')
     if [[ "$*" == *'.steps[]'* ]]; then
       if [ "$SCENARIO" = failed-step ]; then echo 'failed: windows > test'; fi
     elif [ "$SCENARIO" != empty-jobs ]; then
-      printf 'prepare\\tsuccess\\nmacos\\tsuccess\\n'
+      printf 'Hand off to the bot\\tskipped\\nprepare\\tsuccess\\nmacos\\tsuccess\\n'
       if [ "$SCENARIO" = skipped-build ]; then printf 'windows\\tskipped\\n'; elif [ "$SCENARIO" != missing-build ]; then printf 'windows\\tsuccess\\n'; fi
       printf 'publish\\tskipped\\nsummary\\tsuccess\\n'
     fi ;;
@@ -62,6 +62,8 @@ exit 0
         self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
         self.assertIn("PASS", result.stdout)
         self.assertIn("--delete preflight/abc1234-", commands)
+        self.assertIn("api repos/fixture/project/actions/workflows/release.yml/runs?head_sha=", commands)
+        self.assertNotIn("run list", commands)
         self.assertNotIn(" --force ", commands)
         self.assertIn("--force-with-lease=refs/heads/preflight/abc1234-", commands)
 

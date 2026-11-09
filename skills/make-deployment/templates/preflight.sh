@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 # Preflight: run the Release workflow in preflight mode against the commit about to be tagged, BEFORE tagging.
-# Job-level continue-on-error keeps the run green, so GitHub sends no failed-job mail; this script reads the real results.
+# Nothing it starts mails anyone (ci.md): the run it dispatches is OURS and only hands off to github-actions[bot]; the bot's
+# run does the builds, with every job continue-on-error. This script waits for the bot's run and reads the real results.
 #
 #   tools/preflight.sh [tag]     tag is optional: blank = the workflow derives it from the version files
 #
-# Edit the two defaults, or set RELEASE_REPO (owner/name) and RELEASE_WORKFLOW (the workflow's `name:`).
+# Edit the two defaults, or set RELEASE_REPO (owner/name) and RELEASE_WORKFLOW (the workflow's FILE name, e.g. release.yml).
 # Needs a clean tree and an authenticated gh. Works in Git Bash, macOS and Linux. Exit 0 PASS, 1 FAIL, 2 usage.
 set -euo pipefail
 
 REPO="${RELEASE_REPO:-OWNER/REPO}"
-WORKFLOW="${RELEASE_WORKFLOW:-Release}"
+WORKFLOW="${RELEASE_WORKFLOW:-release.yml}"
 EXPECTED_JOBS="${RELEASE_EXPECTED_JOBS_FILE:-.github/release-preflight-jobs.txt}"
 tag="${1:-}"
 
@@ -57,24 +58,25 @@ args=(-f preflight=true)
 [ -n "$tag" ] && args+=(-f "tag=${tag}")
 gh workflow run "$WORKFLOW" --repo "$REPO" --ref "$branch" "${args[@]}" > /dev/null
 
+# The dispatch above is OUR run and it only hands the work to github-actions[bot]. Wait for the bot's run of the same
+# workflow file on this branch and commit. The API wants the workflow FILE name (or id), not its display name.
 run=""
-for _ in $(seq 1 30); do
-  run="$(gh run list --repo "$REPO" --workflow "$WORKFLOW" --branch "$branch" --event workflow_dispatch --limit 5 \
-    --json databaseId,headSha,createdAt \
-    --jq "[.[] | select(.headSha == \"${sha}\" and .createdAt >= \"${before}\")][0].databaseId // empty")"
+for _ in $(seq 1 45); do
+  run="$(gh api "repos/${REPO}/actions/workflows/${WORKFLOW}/runs?head_sha=${sha}&per_page=20" \
+    --jq "[.workflow_runs[] | select(.triggering_actor.login == \"github-actions[bot]\" and .head_branch == \"${branch}\" and .created_at >= \"${before}\")][0].id // empty")"
   [ -n "$run" ] && break
   sleep 4
 done
-if [ -z "$run" ]; then echo "preflight: the run did not appear" >&2; exit 1; fi
+if [ -z "$run" ]; then echo "preflight: the bot's run did not appear (look at https://github.com/${REPO}/actions)" >&2; exit 1; fi
 echo "preflight: https://github.com/${REPO}/actions/runs/${run}"
 gh run watch "$run" --repo "$REPO" --interval 20 > /dev/null 2>&1 || true
 
-# With continue-on-error a failed job may still report as success, so look at its steps as well.
+# Every job is continue-on-error, so a failed job may still report as success, so look at its steps as well.
 jobs="$(gh run view "$run" --repo "$REPO" --json jobs --jq '.jobs[] | [.name, .conclusion] | @tsv')"
 echo "$jobs" | sed 's/^/  /'
 failed_steps="$(gh run view "$run" --repo "$REPO" --json jobs \
   --jq '.jobs[] | .name as $j | .steps[] | select(.conclusion == "failure") | "  failed: \($j) > \(.name)"')"
-bad_jobs="$(echo "$jobs" | awk -F'\t' '$2 != "success" && !($1 == "publish" && $2 == "skipped") { print "  failed: " $1 " (" $2 ")" }')"
+bad_jobs="$(echo "$jobs" | awk -F'\t' '$2 != "success" && !(($1 == "publish" || $1 == "Hand off to the bot") && $2 == "skipped") { print "  failed: " $1 " (" $2 ")" }')"
 if [ -z "$jobs" ]; then bad_jobs="  failed: workflow returned no jobs"; fi
 while IFS= read -r expected || [ -n "$expected" ]; do
   expected="${expected%$'\r'}"

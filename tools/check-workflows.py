@@ -24,7 +24,8 @@ HUMAN_RUN = re.compile(r"github\.triggering_actor\s*!=\s*'github-actions\[bot\]'
 STATUS_FN = re.compile(r"\b(always|failure|cancelled)\(\)")
 ALLOWED_TRIGGERS = {"push", "workflow_dispatch", "workflow_call"}
 SCRIPT_SUFFIXES = {".sh", ".mjs", ".js", ".cjs", ".ts", ".py", ".ps1", ""}
-SKIP_DIRS = {".git", "node_modules", ".github", "dist", "build", "target", ".agents", ".claude", "vendor"}
+SKIP_DIRS = {".git", "node_modules", ".github", "dist", "build", "target", ".agents", ".claude", "vendor",
+             "tests", "test", "e2e", "__tests__"}
 
 
 def load_yaml(path):
