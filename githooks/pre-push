@@ -4,12 +4,23 @@
 # or be cancelled mails whoever triggered it. Then runs the repo's own .git/hooks/pre-push, if it has one.
 here=$(cd "$(dirname "$0")/.." && pwd)
 root=$(git rev-parse --show-toplevel)
-py=$(command -v python3 || command -v python || true)
+# The first interpreter that really runs Python 3.8+. On Windows, python3/python can be the Microsoft Store shortcuts,
+# which exist on PATH but only print an install hint, so each candidate is tried rather than just found; `py -3` is the
+# Windows launcher.
+py=
+for candidate in python3 python "py -3"; do
+  # shellcheck disable=SC2086
+  if $candidate -c 'import sys; sys.exit(sys.version_info < (3, 8))' >/dev/null 2>&1; then
+    py=$candidate
+    break
+  fi
+done
 if [ -z "$py" ]; then
-  echo "pre-push: python3 is needed to check the workflows (AgentSuite/ci.md); refusing" >&2
+  echo "pre-push: Python 3.8+ is needed to check the workflows (AgentSuite/ci.md); refusing" >&2
   exit 1
 fi
-if ! "$py" "$here/tools/check-workflows.py" "$root"; then
+# shellcheck disable=SC2086
+if ! $py "$here/tools/check-workflows.py" "$root"; then
   echo "pre-push: refused - fix the above (AgentSuite/ci.md) so no run can mail a failure" >&2
   exit 1
 fi
