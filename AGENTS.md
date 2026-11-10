@@ -29,9 +29,9 @@ Use a repository's operational tool, such as `tools/server-config.sh`, for serve
 
 Run only one heavy device/desktop build at a time, using the repository's build lock when available. Follow the target project's release lane and version conventions when releasing it.
 
-## Tickets
+## Tickets and status
 
-When ticket work is requested, use the ticket client in the AgentSuite checkout to check existing tickets and propose adds or completions to Sean's Inbox. Report proposals as queued only after the API confirms it. Missing credentials must not stop unrelated work.
+Always keep TaskMind (seancheren.com/taskmind) and seancheren.com/status current; once at the end of a task, not per step. TaskMind: `tools/todo list|add|done` in the AgentSuite checkout proposes new work and completions (name the commit or version), which land under Proposals for Sean's approval; report them as queued only after the API confirms it. Status: a release reports itself through CoreMind `bin/report-status.sh` (the lanes call it); a release or deploy that went out any other way reports with `start`/`finish` there. Missing credentials must not stop unrelated work.
 
 ## Maintaining this baseline
 
