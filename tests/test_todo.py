@@ -140,6 +140,45 @@ class TodoTests(unittest.TestCase):
             self.assertIn("[To do]", output.getvalue())
             self.assertIn("[On Hold]", output.getvalue())
 
+    def test_list_labels_deferred(self):
+        reply = {"ok": True, "tickets": [
+            {"n": 14, "kind": "todo", "title": "Parked", "priority": "normal", "status": "deferred", "project": "CalMind"}]}
+        with patch.object(todo, "call", return_value=reply):
+            with patch("sys.argv", ["todo", "list"]):
+                with patch("sys.stdout", new_callable=io.StringIO) as output:
+                    todo.main()
+        self.assertIn("[Deferred]", output.getvalue())
+
+    def test_status_never_offers_deferred_but_expect_accepts_it(self):
+        with patch.object(todo, "call") as call:
+            with patch("sys.argv", ["todo", "status", "12", "deferred"]):
+                with patch("sys.stderr", new_callable=io.StringIO), self.assertRaises(SystemExit):
+                    todo.main()
+            call.assert_not_called()
+        self.assertNotIn("deferred", todo.STATUSES)
+        with patch.object(todo, "call", return_value={"ok": True, "n": 12, "status": "doing", "changed": True}) as call:
+            with patch("sys.argv", ["todo", "status", "12", "doing", "--expect", "deferred"]):
+                with patch("sys.stdout", new_callable=io.StringIO):
+                    todo.main()
+            self.assertEqual(call.call_args.args[2]["expect"], "deferred")
+
+    def refused(self, body):
+        error = urllib.error.HTTPError("https://fixture.invalid", 409, "Conflict", {}, io.BytesIO(json.dumps(body).encode()))
+        with self.assertRaises(SystemExit) as failure:
+            self.request(error=error)
+        return str(failure.exception)
+
+    def test_refusal_on_a_deferred_ticket_is_explained_without_echoing_the_body(self):
+        message = self.refused({"ok": False, "code": "deferred", "error": "fixture-secret"})
+        self.assertIn("Deferred", message)
+        self.assertIn("leave deferred tickets alone", message)
+        self.assertNotIn("fixture-secret", message)
+
+    def test_other_conflicts_keep_the_generic_message(self):
+        message = self.refused({"ok": False, "error": "The ticket status changed."})
+        self.assertIn("409", message)
+        self.assertNotIn("Deferred", message)
+
 
 if __name__ == "__main__":
     unittest.main()

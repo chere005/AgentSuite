@@ -9,8 +9,10 @@
   todo status N todo|doing|review|done [-n NOTE] [--expect STATUS]
                                                update an existing ticket's lifecycle directly
 
-Lifecycle columns are To do, In Progress, On Hold and Done. New work and `done` proposals still wait for approval;
-`status` implements Sean's standing authorization to keep existing development work current.
+Lifecycle columns are To do, In Progress, On Hold, Deferred and Done. New work and `done` proposals still wait for approval;
+`status` implements Sean's standing authorization to keep existing development work current. Deferred is the owner's:
+long-term parked work that only Sean moves in or out of, so `status` never sets it and is refused on a ticket that is
+deferred (leave it alone; `--expect deferred` asserts it). `list` shows it as [Deferred].
 
 The token is read from $TODO_TOKEN or ~/.config/seancheren/todo-token; $TODO_API overrides the endpoint.
 """
@@ -23,6 +25,8 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 API = os.environ.get("TODO_API", "https://seancheren.com/taskmind/tickets.php")
 STATUSES = {"todo": "To do", "doing": "In Progress", "review": "On Hold", "done": "Done"}
+# Deferred is shown and asserted (--expect) but never set by an agent.
+LABELS = {**STATUSES, "deferred": "Deferred"}
 
 
 def token() -> str:
@@ -37,6 +41,15 @@ def token() -> str:
     if not t or any(ord(char) < 33 or ord(char) > 126 for char in t):
         sys.exit("todo: token is empty or contains invalid characters")
     return t
+
+
+def deferred_refusal(error) -> bool:
+    """True when a 409 body carries the server's fixed deferred code (nothing else of the body is ever shown)."""
+    try:
+        body = json.load(error)
+    except (ValueError, UnicodeError, OSError, AttributeError):
+        return False
+    return isinstance(body, dict) and body.get("code") == "deferred"
 
 
 def call(method: str, query: dict, body=None) -> dict:
@@ -57,6 +70,8 @@ def call(method: str, query: dict, body=None) -> dict:
         with urllib.request.build_opener(NoRedirect()).open(req, timeout=20) as response:
             result = json.load(response)
     except urllib.error.HTTPError as error:
+        if error.code == 409 and deferred_refusal(error):
+            sys.exit("todo: refused: that ticket is Deferred by its owner; agents leave deferred tickets alone")
         sys.exit(f"todo: HTTP {error.code}; check authentication and the API endpoint")
     except (urllib.error.URLError, TimeoutError, OSError):
         sys.exit("todo: request failed; check the network and endpoint before retrying")
@@ -85,7 +100,7 @@ def main() -> None:
     dn = sub.add_parser("done"); dn.add_argument("n", type=int); dn.add_argument("-n", "--note", default="")
     st = sub.add_parser("status"); st.add_argument("n", type=int); st.add_argument("status", choices=STATUSES)
     st.add_argument("-n", "--note", default="")
-    st.add_argument("--expect", choices=STATUSES, help="refuse if another agent has changed the current status")
+    st.add_argument("--expect", choices=LABELS, help="refuse if another agent has changed the current status")
     a = p.parse_args()
 
     if a.cmd == "list":
@@ -96,7 +111,7 @@ def main() -> None:
         for t in tickets:
             where = t["project"] + " " if t.get("project") else ""
             pri = " (" + t["priority"] + ")" if t["priority"] != "normal" else ""
-            label = "To do" if t["status"] == "open" else STATUSES.get(t["status"], t["status"])
+            label = "To do" if t["status"] == "open" else LABELS.get(t["status"], t["status"])
             print(f"#{t['n']:<4} {where}{t['kind']}: {t['title']}{pri} [{label}]")
         if r.get("pending"):
             print(f"({r['pending']} proposal(s) waiting in the inbox)")
