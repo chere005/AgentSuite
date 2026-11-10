@@ -29,6 +29,8 @@ Use a repository's operational tool, such as `tools/server-config.sh`, for serve
 
 Run only one heavy device/desktop build at a time, using the repository's build lock when available. Follow the target project's release lane and version conventions when releasing it.
 
+- macOS supports Apple Silicon only; do not build or distribute Intel or universal Mac artifacts. Windows and Linux architecture support is unchanged.
+
 ## Tickets and status
 
 - Development boards use **To do / In Progress / On Hold / Done**; use `tools/todo status N todo|doing|review|done -n "evidence"` when work starts, stops or finishes: active work is In Progress, inactive branch/handoff progress is On Hold, no progress is To do, completed work is Done.
