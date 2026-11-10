@@ -33,7 +33,7 @@ Run only one heavy device/desktop build at a time, using the repository's build 
 
 - Development boards use **To do / In Progress / On Hold / Done**; use `tools/todo status N todo|doing|review|done -n "evidence"` when work starts, stops or finishes: active work is In Progress, inactive branch/handoff progress is On Hold, no progress is To do, completed work is Done.
 - New work uses `tools/todo add` and waits under Proposals; `tools/todo done` remains available for a completion proposal when direct completion is not authorized. Confirm API success before reporting a change and name the commit or version for completion.
-- Keep seancheren.com/status current through `~/GIT/MindSuite/CoreMind/bin/report-status.sh` (release lanes call it); report a release made another way with `start`/`finish`. Missing credentials must not stop unrelated work.
+- Keep seancheren.com/status current through `~/GIT/CoreMind/bin/report-status.sh` while that checkout exists, otherwise `~/GIT/MindSuite/CoreMind/bin/report-status.sh` (release lanes call it); report other releases with `start`/`finish` and preserve the existing private history at cutover.
 
 ## Maintaining this baseline
 
