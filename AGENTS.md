@@ -31,7 +31,9 @@ Run only one heavy device/desktop build at a time, using the repository's build 
 
 ## Tickets and status
 
-Always keep TaskMind (seancheren.com/taskmind) and seancheren.com/status current; once at the end of a task, not per step. TaskMind: `tools/todo list|add|done` in the AgentSuite checkout proposes new work and completions (name the commit or version), which land under Proposals for Sean's approval; report them as queued only after the API confirms it. Status: a release reports itself through CoreMind `bin/report-status.sh` (the lanes call it); a release or deploy that went out any other way reports with `start`/`finish` there. Missing credentials must not stop unrelated work.
+- Development boards use **To do / In Progress / On Hold / Done**; use `tools/todo status N todo|doing|review|done -n "evidence"` when work starts, stops or finishes: active work is In Progress, inactive branch/handoff progress is On Hold, no progress is To do, completed work is Done.
+- New work uses `tools/todo add` and waits under Proposals; `tools/todo done` remains available for a completion proposal when direct completion is not authorized. Confirm API success before reporting a change and name the commit or version for completion.
+- Keep seancheren.com/status current through `~/GIT/MindSuite/CoreMind/bin/report-status.sh` (release lanes call it); report a release made another way with `start`/`finish`. Missing credentials must not stop unrelated work.
 
 ## Maintaining this baseline
 

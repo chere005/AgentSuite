@@ -11,7 +11,7 @@ Feel free to copy the instructions, skills and tools into your own projects, etc
 ## Quick start / Install
 
 ```sh
-python3 tools/install.py repo ../CalMind     # --dry-run first, --check later
+python3 tools/install.py repo ../MindSuite   # --dry-run first, --check later
 ```
 
 Writes a managed block into the repo's `AGENTS.md`, adds `@AGENTS.md` to its `CLAUDE.md`, and copies the skills to `.agents/skills` and `.claude/skills`.
@@ -24,7 +24,8 @@ Writes a managed block into the repo's `AGENTS.md`, adds `@AGENTS.md` to its `CL
 
 ```sh
 python3 tools/install.py hook ~/.claude      # Claude Code hook that asks for shorter replies
-python3 tools/todo list AgentSuite           # read Sean's ticket board; add / done propose tickets
+python3 tools/todo list AgentSuite           # read this repo's tickets and lifecycle columns
+python3 tools/todo status 123 doing -n "Working on the assigned fix"
 python3 -B tools/check.py                    # offline checks
 ```
 
@@ -32,7 +33,7 @@ python3 -B tools/check.py                    # offline checks
 
 - Five of our own skills (PHP web work, NearlyFreeSpeech hosting, machine bootstrap, GitHub Releases deployment, Electron) plus three vendored from Anthropic and Vercel. See [skills/](skills/README.md).
 - The hook warns past six prose lines or 700 characters; `AGENTSUITE_BREVITY_MODE=block` refuses, `off` disables.
-- `tools/todo` needs `TODO_TOKEN` or `~/.config/seancheren/todo-token`; it only proposes, Sean approves under Proposals in TaskMind (seancheren.com/taskmind/#/proposals).
+- `tools/todo` needs `TODO_TOKEN` or `~/.config/seancheren/todo-token`; `add` and `done` propose changes for approval, while `status` keeps existing tickets in To do, In Progress, On Hold or Done under Sean's standing authorization.
 - Release shorthand: **`tdtp`** = test, deploy, tag, push (full tests first); **`dtp`** = deploy, tag, push (only the tests the change needs). Both end with the new version installed on Sean's machine. Typing either authorizes that repo's release only.
 
 ## Building

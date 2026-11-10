@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
-"""Propose changes to Sean's tickets in TaskMind (seancheren.com/taskmind). Nothing changes until he approves them under Proposals.
+"""Keep Sean's tickets in TaskMind current (seancheren.com/taskmind).
 
   todo list [REPO]                              open tickets (all, or one repo's), with their numbers
   todo add REPO KIND "TITLE" [-n NOTES] [-p high|normal|low]
                                                 propose a ticket; KIND is todo|bug|misc; REPO is a project
                                                 name (CalMind, seancheren-site, ...) or - for none
   todo done N [-n NOTE]                         propose marking ticket #N done (say what did it: a commit, a version)
+  todo status N todo|doing|review|done [-n NOTE] [--expect STATUS]
+                                               update an existing ticket's lifecycle directly
+
+Lifecycle columns are To do, In Progress, On Hold and Done. New work and `done` proposals still wait for approval;
+`status` implements Sean's standing authorization to keep existing development work current.
 
 The token is read from $TODO_TOKEN or ~/.config/seancheren/todo-token; $TODO_API overrides the endpoint.
 """
@@ -17,6 +22,7 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 API = os.environ.get("TODO_API", "https://seancheren.com/taskmind/tickets.php")
+STATUSES = {"todo": "To do", "doing": "In Progress", "review": "On Hold", "done": "Done"}
 
 
 def token() -> str:
@@ -77,19 +83,34 @@ def main() -> None:
     ad.add_argument("title"); ad.add_argument("-n", "--notes", default=""); ad.add_argument("-p", "--priority", default="normal",
                                                                                           choices=["high", "normal", "low"])
     dn = sub.add_parser("done"); dn.add_argument("n", type=int); dn.add_argument("-n", "--note", default="")
+    st = sub.add_parser("status"); st.add_argument("n", type=int); st.add_argument("status", choices=STATUSES)
+    st.add_argument("-n", "--note", default="")
+    st.add_argument("--expect", choices=STATUSES, help="refuse if another agent has changed the current status")
     a = p.parse_args()
 
     if a.cmd == "list":
-        r = call("GET", {"op": "list", "repo": a.repo})
+        r = call("GET", {"op": "list", "repo": a.repo, "lifecycle": 1})
         tickets = r.get("tickets")
         if not isinstance(tickets, list) or any(not isinstance(t, dict) or not {"n", "kind", "title", "priority", "status"} <= t.keys() for t in tickets):
             sys.exit("todo: invalid ticket list")
         for t in tickets:
             where = t["project"] + " " if t.get("project") else ""
             pri = " (" + t["priority"] + ")" if t["priority"] != "normal" else ""
-            print(f"#{t['n']:<4} {where}{t['kind']}: {t['title']}{pri}" + (" [doing]" if t["status"] == "doing" else ""))
+            label = "To do" if t["status"] == "open" else STATUSES.get(t["status"], t["status"])
+            print(f"#{t['n']:<4} {where}{t['kind']}: {t['title']}{pri} [{label}]")
         if r.get("pending"):
             print(f"({r['pending']} proposal(s) waiting in the inbox)")
+        return
+    if a.cmd == "status":
+        if a.n < 1:
+            sys.exit("todo: ticket number must be positive")
+        payload = {"op": "status", "n": a.n, "status": a.status, "from": source(), "note": a.note}
+        if a.expect is not None:
+            payload["expect"] = a.expect
+        r = call("POST", {}, payload)
+        if type(r.get("n")) is not int or r["n"] != a.n or r.get("status") != a.status or type(r.get("changed")) is not bool:
+            sys.exit("todo: invalid status confirmation; inspect the ticket before retrying")
+        print(f"#{a.n} {STATUSES[a.status]}" + ("" if r["changed"] else " (already current)"))
         return
     if a.cmd == "add":
         prop = {"action": "add", "repo": "" if a.repo == "-" else a.repo, "kind": a.kind, "title": a.title,
