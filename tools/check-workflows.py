@@ -46,7 +46,8 @@ def load_yaml(path):
             data = json.loads(out.stdout)
             return stringify(data)
         raise ValueError(out.stderr.strip() or "ruby could not parse it")
-    raise RuntimeError("no YAML parser: install PyYAML (python3 -m pip install pyyaml) or Ruby")
+    raise RuntimeError("no YAML parser: install PyYAML (python3 -m pip install --user pyyaml; on Windows "
+                       "py -3 -m pip install --user pyyaml) or Ruby")
 
 
 def stringify(node):
@@ -179,7 +180,7 @@ def check_scripts(root):
         rel = path.relative_to(root)
         if any(part in SKIP_DIRS for part in rel.parts[:-1]) or path.suffix not in SCRIPT_SUFFIXES:
             continue
-        if path.suffix == "" and not str(rel).startswith(("tools/", "scripts/", "bin/", ".githooks/")):
+        if path.suffix == "" and not rel.as_posix().startswith(("tools/", "scripts/", "bin/", ".githooks/")):
             continue
         if rel.name == "check-workflows.py":
             continue
@@ -189,10 +190,10 @@ def check_scripts(root):
             continue
         for n, line in enumerate(text.splitlines(), 1):
             if re.search(r"\bgh\s+run\s+rerun\b", line):
-                errors.append(f"{rel}:{n}: `gh run rerun` runs as you, so the bot-only jobs skip: re-dispatch instead "
+                errors.append(f"{rel.as_posix()}:{n}: `gh run rerun` runs as you, so the bot-only jobs skip: re-dispatch instead "
                               "(gh workflow run <file> --ref <ref> -f ...; its handoff job passes it to the bot)")
             if re.search(r"\bgh\s+run\s+cancel\b", line):
-                errors.append(f"{rel}:{n}: `gh run cancel` makes a cancelled run, and GitHub mails cancelled runs like "
+                errors.append(f"{rel.as_posix()}:{n}: `gh run cancel` makes a cancelled run, and GitHub mails cancelled runs like "
                               "failed ones: let the bot's run finish (its jobs are continue-on-error)")
     return errors
 
@@ -204,7 +205,10 @@ def check_repo(root):
     for flow in flows:
         errors += check_workflow(flow)
     errors += check_scripts(root)
-    return [e.replace(str(root) + "/", "") for e in errors], len(flows)
+    # Workflow messages begin with the file's absolute path; show it repo-relative, with / on Windows too.
+    for flow in flows:
+        errors = [e.replace(str(flow), flow.relative_to(root).as_posix()) for e in errors]
+    return errors, len(flows)
 
 
 def main(argv):

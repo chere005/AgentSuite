@@ -121,6 +121,17 @@ class CheckWorkflowsTests(unittest.TestCase):
         out = self.check(GOOD, {"scripts/preflight.sh": "gh run cancel \"$run\"\n"})
         self.assertIn("scripts/preflight.sh:1: `gh run cancel`", out)
 
+    def test_extensionless_script_is_checked_on_every_os(self):
+        # Needs no YAML parser. On Windows str(rel) is tools\lane, which once skipped every extensionless script.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "tools").mkdir()
+            (root / "tools/lane").write_text("#!/bin/sh\ngh run cancel 1\n", encoding="utf-8")
+            subprocess.run(["git", "init", "-q", str(root)], check=True)
+            subprocess.run(["git", "-C", str(root), "add", "-A"], check=True)
+            out = "\n".join(cw.check_scripts(root))
+        self.assertIn("tools/lane:2: `gh run cancel`", out)
+
     def test_this_repository_complies(self):
         errors, count = cw.check_repo(ROOT)
         self.assertEqual(errors, [])
