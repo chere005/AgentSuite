@@ -33,7 +33,7 @@ Run only one heavy device/desktop build at a time, using the repository's build 
 
 ## Tickets and status
 
-- Development boards are **To do / In Progress / On Hold / Deferred / Done**; use `tools/todo status N todo|doing|review|done -n "evidence"` when work starts, stops or finishes: active work is In Progress, inactive branch/handoff progress is On Hold, no progress is To do, completed work is Done. Deferred is Sean's long-term park: only he sets or clears it, so leave a `[Deferred]` ticket alone (`status` is refused on it; propose `done` only if it is truly finished).
+- Development boards are **To do / In Progress / On Hold / Deferred / Done**; use `tools/todo status N todo|doing|review|done -n "evidence"` when work starts, stops or finishes: active work is In Progress, inactive branch/handoff progress is On Hold, no progress is To do, completed work is Done. Deferred is the owner's; agents leave those tickets alone: only he sets or clears it (`status` is refused on it; propose `done` only if it is truly finished).
 - New work uses `tools/todo add` and waits under Proposals; `tools/todo done` remains available for a completion proposal when direct completion is not authorized. Confirm API success before reporting a change and name the commit or version for completion.
 - Keep seancheren.com/status current through `~/GIT/MindSuite/CoreMind/bin/report-status.sh` (release lanes call it; its private history lives beside it); report other releases with `start`/`finish`.
 
