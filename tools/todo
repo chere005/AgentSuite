@@ -10,7 +10,7 @@
                                                update an existing ticket's lifecycle directly
 
 Lifecycle columns are To do, In Progress, On Hold, Deferred and Done. New work and `done` proposals still wait for approval;
-`status` implements Sean's standing authorization to keep existing development work current. Deferred is the owner's:
+`status` requires Sean's explicit approval for direct changes in the current task. Keep todos outcome-level; put technical notes in ~/GIT/dev-notes. Deferred is the owner's:
 long-term parked work that only Sean moves in or out of, so `status` never sets it and is refused on a ticket that is
 deferred (leave it alone; `--expect deferred` asserts it). `list` shows it as [Deferred].
 
