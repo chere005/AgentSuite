@@ -34,7 +34,7 @@ Run only one heavy device/desktop build at a time, using the repository's build 
 ## Tickets and status
 
 - TaskMind todos describe user outcomes; keep technical findings, test evidence and handoffs in `~/GIT/dev-notes`, grouping internal steps under the same outcome.
-- Use `tools/todo add` and `tools/todo done` proposals by default; direct board changes need Sean's explicit approval for the current task. Leave Deferred items alone.
+- Work existing tickets; create TaskMind tasks only when Sean explicitly asks. Direct board changes need his approval for the current task; leave Deferred items alone.
 - Keep seancheren.com/status current through `~/GIT/MindSuite/CoreMind/bin/report-status.sh` (release lanes call it; its private history lives beside it); report other releases with `start`/`finish`.
 
 ## Maintaining this baseline
