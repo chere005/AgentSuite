@@ -31,11 +31,10 @@ Run only one heavy device/desktop build at a time, using the repository's build 
 
 - macOS supports Apple Silicon only; do not build or distribute Intel or universal Mac artifacts. Windows and Linux architecture support is unchanged.
 
-## Tickets and status
+## Tickets
 
 - TaskMind todos describe user outcomes; keep technical findings, test evidence and handoffs in `~/GIT/dev-notes`, grouping internal steps under the same outcome.
 - Work existing tickets; create TaskMind tasks only when Sean explicitly asks. Direct board changes need his approval for the current task; leave Deferred items alone.
-- Keep seancheren.com/status current through `~/GIT/MindSuite/CoreMind/bin/report-status.sh` (release lanes call it; its private history lives beside it); report other releases with `start`/`finish`.
 
 ## Maintaining this baseline
 
