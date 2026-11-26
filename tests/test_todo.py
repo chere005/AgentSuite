@@ -85,6 +85,22 @@ class TodoTests(unittest.TestCase):
                 with self.assertRaisesRegex(SystemExit, "refused"):
                     todo.main()
 
+    def test_completion_proposals_preserve_numbers_and_accept_task_ids(self):
+        for args, target in [(["12"], {"n": 12}), (["--task", "fd30fde9fbee"], {"task_id": "fd30fde9fbee"})]:
+            with self.subTest(args=args), patch.object(todo, "call", return_value={"ok": True, "queued": 1, "results": ["proposal"]}) as call:
+                with patch.object(todo, "source", return_value="fixture"), patch("sys.argv", ["todo", "done", *args, "-n", "release evidence"]):
+                    with patch("sys.stdout", new_callable=io.StringIO) as output:
+                        todo.main()
+                call.assert_called_once_with("POST", {}, {"op": "propose", "from": "fixture", "proposals": [{"action": "done", "note": "release evidence", **target}]})
+                self.assertIn("queued", output.getvalue())
+
+    def test_bad_completion_targets_never_reach_api(self):
+        for args in [[], ["0"], ["12", "--task", "task"], ["--task", ""], ["--task", "bad/task"], ["--task", "a" * 41]]:
+            with self.subTest(args=args), patch.object(todo, "call") as call:
+                with patch("sys.argv", ["todo", "done", *args]), patch("sys.stderr", new_callable=io.StringIO), self.assertRaises(SystemExit):
+                    todo.main()
+                call.assert_not_called()
+
     def status(self, reply, number="12", status="doing"):
         with patch.object(todo, "call", return_value=reply) as call:
             with patch.object(todo, "source", return_value="fixture agent"):

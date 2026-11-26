@@ -6,6 +6,7 @@
                                                 propose a ticket; KIND is todo|bug|misc; REPO is a project
                                                 name (CalMind, seancheren-site, ...) or - for none
   todo done N [-n NOTE]                         propose marking ticket #N done (say what did it: a commit, a version)
+  todo done --task ID [-n NOTE]                 propose completing an existing Development task without a ticket number
   todo status N todo|doing|review|done [-n NOTE] [--expect STATUS]
                                                update an existing ticket's lifecycle directly
 
@@ -16,7 +17,7 @@ deferred (leave it alone; `--expect deferred` asserts it). `list` shows it as [D
 
 The token is read from $TODO_TOKEN or ~/.config/seancheren/todo-token; $TODO_API overrides the endpoint.
 """
-import argparse, json, os, subprocess, sys, urllib.error, urllib.parse, urllib.request
+import argparse, json, os, re, subprocess, sys, urllib.error, urllib.parse, urllib.request
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -97,11 +98,19 @@ def main() -> None:
     ad = sub.add_parser("add"); ad.add_argument("repo"); ad.add_argument("kind", choices=["todo", "bug", "misc"])
     ad.add_argument("title"); ad.add_argument("-n", "--notes", default=""); ad.add_argument("-p", "--priority", default="normal",
                                                                                           choices=["high", "normal", "low"])
-    dn = sub.add_parser("done"); dn.add_argument("n", type=int); dn.add_argument("-n", "--note", default="")
+    dn = sub.add_parser("done"); dn.add_argument("n", type=int, nargs="?"); dn.add_argument("--task", dest="task_id")
+    dn.add_argument("-n", "--note", default="")
     st = sub.add_parser("status"); st.add_argument("n", type=int); st.add_argument("status", choices=STATUSES)
     st.add_argument("-n", "--note", default="")
     st.add_argument("--expect", choices=LABELS, help="refuse if another agent has changed the current status")
     a = p.parse_args()
+    if a.cmd == "done":
+        if (a.n is None) == (a.task_id is None):
+            p.error("done requires either a ticket number or --task ID")
+        if a.n is not None and a.n < 1:
+            p.error("ticket number must be positive")
+        if a.task_id is not None and not re.fullmatch(r"[A-Za-z0-9_-]{1,40}", a.task_id):
+            p.error("invalid task ID")
 
     if a.cmd == "list":
         r = call("GET", {"op": "list", "repo": a.repo, "lifecycle": 1})
@@ -131,7 +140,7 @@ def main() -> None:
         prop = {"action": "add", "repo": "" if a.repo == "-" else a.repo, "kind": a.kind, "title": a.title,
                 "notes": a.notes, "priority": a.priority}
     else:
-        prop = {"action": "done", "n": a.n, "note": a.note}
+        prop = {"action": "done", "note": a.note, **({"task_id": a.task_id} if a.task_id is not None else {"n": a.n})}
     r = call("POST", {}, {"op": "propose", "from": source(), "proposals": [prop]})
     results = r.get("results")
     if not isinstance(results, list) or len(results) != 1 or not isinstance(results[0], str):

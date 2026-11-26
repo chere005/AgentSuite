@@ -26,6 +26,7 @@ Writes a managed block into the repo's `AGENTS.md`, adds `@AGENTS.md` to its `CL
 python3 tools/install.py hook ~/.claude      # Claude Code hook that asks for shorter replies
 python3 tools/todo list AgentSuite           # read this repo's tickets and lifecycle columns
 python3 tools/todo status 123 doing -n "Working on the assigned fix"
+python3 tools/todo done --task TASK_ID -n "Verified release evidence" # ID from the existing Development task's URL
 python3 -B tools/check.py                    # offline checks
 ```
 
